@@ -1,6 +1,7 @@
 # TBH Secure Agents
 
-[![PyPI version](https://badge.fury.io/py/tbh_secure_agents.svg)](<img width="618" alt="Screenshot 2025-04-20 at 12 11 28 PM" src="https://github.com/user-attachments/assets/e893bf7a-438e-494c-a00b-a95dfde30c41" />
+[![PyPI version](https://badge.fury.io/py/tbh_secure_agents.svg)](<img width="618" alt="Main" src="https://github.com/user-attachments/assets/dbbf5a4f-7b0b-4f43-9b37-ef77dc761ff1" />
+
 ) <!-- Placeholder badge --> <!-- Placeholder badge -->
 
 **A secure multi-agent framework by TBH.AI focused on high security.**
