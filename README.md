@@ -1,6 +1,6 @@
 # TBH Secure Agents
 
-(<img width="618" alt="Main" src="https://github.com/user-attachments/assets/dbbf5a4f-7b0b-4f43-9b37-ef77dc761ff1" />) <!-- Placeholder badge --> <!-- Placeholder badge -->
+<img width="618" alt="Main" src="https://github.com/user-attachments/assets/dbbf5a4f-7b0b-4f43-9b37-ef77dc761ff1" /> <!-- Placeholder badge --> <!-- Placeholder badge -->
 
 **A secure multi-agent framework by TBH.AI focused on high security.**
 
