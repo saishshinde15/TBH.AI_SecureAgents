@@ -1,6 +1,6 @@
 # Usage Guide
 
-![TBH.AI Logo](./assets/logo.png) <!-- Placeholder - Save logo here -->
+<img width="618" alt="Main" src="https://github.com/user-attachments/assets/e36e36c5-226e-47c0-9fe0-d3c07fdee98d" /> <!-- Placeholder - Save logo here -->
 
 This guide explains the core concepts of `tbh_secure_agents` and how to use them to build your multi-agent system.
 
