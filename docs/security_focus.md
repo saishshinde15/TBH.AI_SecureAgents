@@ -1,6 +1,7 @@
 # Security Focus of TBH Secure Agents
 
-![TBH.AI Logo](./assets/logo.png) <!-- Placeholder - Save logo here -->
+<img width="618" alt="Main" src="https://github.com/user-attachments/assets/464004e3-205f-457f-be4d-7fd60f77581e" />
+ <!-- Placeholder - Save logo here -->
 
 `tbh_secure_agents` is designed with security as a primary consideration from the outset. While many multi-agent frameworks prioritize flexibility and rapid prototyping, our goal is to provide a foundation for building agentic systems where security controls and considerations are integral, not afterthoughts.
 
