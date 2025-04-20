@@ -68,5 +68,5 @@ This project is licensed under the MIT License - see the `LICENSE` file for deta
 
 ## Contact
 
-TBH.AI - [Your Company Website/Contact]
-Saish - [Your Contact/GitHub Profile]
+TBH.AI 
+Saish - saish.shinde.jb@gmail.com
