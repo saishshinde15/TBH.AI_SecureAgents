@@ -1,6 +1,6 @@
 # Expert Security Profiles
 
-![TBH Secure Agents Logo](./assets/logo.png)
+<img width="618" alt="Main" src="https://github.com/user-attachments/assets/dbbf5a4f-7b0b-4f43-9b37-ef77dc761ff1" />
 
 The `tbh_secure_agents` framework includes a `security_profile` parameter in the `Expert` class constructor. This parameter is a key part of the framework's security-first design, providing a mechanism for defining and enforcing different security constraints and capabilities for individual experts.
 
