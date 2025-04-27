@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=42"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "tbh_secure_agents"
@@ -38,6 +38,12 @@ dev = ["pytest>=6.0", "flake8>=3.8", "black>=20.8b1"]
 # If you have console scripts:
 # [project.scripts]
 # tbh-agent = "tbh_secure_agents.cli:main"
+
+[tool.hatch.metadata]
+# Attempt to prevent inclusion of license file content in wheel metadata
+# Rely solely on the license SPDX identifier in the [project] section
+allow-direct-references = true
+include-license-file = false
 
 [tool.setuptools.packages.find]
 # Explicitly find packages only within the 'tbh_secure_agents' directory

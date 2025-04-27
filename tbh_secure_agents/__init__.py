@@ -18,8 +18,8 @@ logging.basicConfig(
 
 
 # Expose core classes
-from .agent import Agent
-from .task import Task
-from .crew import Crew
+from .agent import Expert
+from .task import Operation
+from .crew import Squad
 
-__all__ = ['Agent', 'Task', 'Crew', '__version__']
+__all__ = ['Expert', 'Operation', 'Squad', '__version__']

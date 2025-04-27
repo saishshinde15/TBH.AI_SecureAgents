@@ -35,25 +35,25 @@ Here's a conceptual example:
 
 ```python
 # Example Usage (Conceptual) - See docs/usage_guide.md for details
-# from tbh_secure_agents import Agent, Task, Crew
+# from tbh_secure_agents import Expert, Operation, Squad
 
-# Define agents with specific roles and security contexts
-# security_researcher = Agent(role='Security Researcher', goal='Identify vulnerabilities', security_profile='high')
-# reporting_agent = Agent(role='Reporter', goal='Summarize findings securely', security_profile='medium')
+# Define experts with specific specialties and security contexts
+# security_researcher = Expert(specialty='Security Researcher', objective='Identify vulnerabilities', security_profile='high')
+# reporting_expert = Expert(specialty='Reporter', objective='Summarize findings securely', security_profile='medium')
 
-# Define tasks
-# research_task = Task(description='Analyze system X for security flaws', agent=security_researcher)
-# reporting_task = Task(description='Compile a secure report of findings', agent=reporting_agent)
+# Define operations
+# research_operation = Operation(instructions='Analyze system X for security flaws', expert=security_researcher)
+# reporting_operation = Operation(instructions='Compile a secure report of findings', expert=reporting_expert)
 
-# Form a crew
-# security_crew = Crew(
-#     agents=[security_researcher, reporting_agent],
-#     tasks=[research_task, reporting_task],
+# Form a squad
+# security_squad = Squad(
+#     agents=[security_researcher, reporting_expert],
+#     tasks=[research_operation, reporting_operation],
 #     verbose=True # Or configure security logging
 # )
 
-# Kick off the process
-# result = security_crew.kickoff()
+# Deploy the squad
+# result = security_squad.deploy()
 
 # print(result) # Securely handled output
 ```

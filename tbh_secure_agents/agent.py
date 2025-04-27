@@ -2,13 +2,14 @@
 # Author: Saish (TBH.AI)
 
 """
-Defines the core Agent class for the TBH Secure Agents framework.
-Agents will encapsulate roles, goals, tools, and security contexts,
+Defines the core Expert class for the TBH Secure Agents framework.
+Experts will encapsulate roles, goals, tools, and security contexts,
 utilizing Google Gemini as the LLM.
 """
 
 import google.generativeai as genai
 import os
+import re
 import logging # Import logging
 from typing import Optional, List, Any
 
@@ -19,35 +20,35 @@ logger = logging.getLogger(__name__)
 # The library automatically looks for the GOOGLE_API_KEY environment variable.
 # Ensure this variable is set in your environment.
 # Example: export GOOGLE_API_KEY='YOUR_API_KEY'
-# Configuration will now happen within Agent __init__ if key is provided
+# Configuration will now happen within Expert __init__ if key is provided
 
 # Removed duplicate class definition here (already done)
 
-class Agent:
+class Expert:
     """
-    Represents an autonomous agent within the TBH Secure Agents framework.
+    Represents an autonomous expert within the TBH Secure Agents framework.
 
     Attributes:
-        role (str): The role of the agent (e.g., 'Security Analyst').
-        goal (str): The primary objective of the agent.
-        backstory (str, optional): A description of the agent's background.
+        specialty (str): The specialty of the expert (e.g., 'Security Analyst').
+        objective (str): The primary objective of the expert.
+        background (str, optional): A description of the expert's background.
         llm_model_name (str): The specific Gemini model to use (e.g., 'gemini-pro'). Defaults to 'gemini-pro'.
-        tools (List[Any], optional): A list of tools available to the agent.
+        tools (List[Any], optional): A list of tools available to the expert.
         security_profile (str, optional): Defines the security constraints and capabilities. Defaults to 'default'.
         # Add other relevant attributes like memory, max_iterations, etc.
     """
     def __init__(self,
-                 role: str,
-                 goal: str,
-                 backstory: Optional[str] = None,
+                 specialty: str,
+                 objective: str,
+                 background: Optional[str] = None,
                  llm_model_name: str = 'gemini-2.0-flash-lite', # Updated default model name per user request
                  tools: Optional[List[Any]] = None,
                  security_profile: str = 'default',
                  api_key: Optional[str] = None, # Add api_key parameter
                  **kwargs):
-        self.role = role
-        self.goal = goal
-        self.backstory = backstory
+        self.specialty = specialty
+        self.objective = objective
+        self.background = background
         self.llm_model_name = llm_model_name
         self.tools = tools or []
         self.security_profile = security_profile
@@ -67,58 +68,58 @@ class Agent:
                 # Create the model instance
                 # TODO: Add generation_config and safety_settings based on security_profile
                 self.llm = genai.GenerativeModel(self.llm_model_name)
-                logger.info(f"Agent '{self.role}' initialized with Gemini model '{self.llm_model_name}' and security profile '{self.security_profile}'.") # Use logger
+                logger.info(f"Expert '{self.specialty}' initialized with Gemini model '{self.llm_model_name}' and security profile '{self.security_profile}'.") # Use logger
 
             except Exception as e:
-                logger.error(f"Error initializing Gemini model for agent '{self.role}': {e}", exc_info=True) # Use logger, add traceback
+                logger.error(f"Error initializing Gemini model for expert '{self.specialty}': {e}", exc_info=True) # Use logger, add traceback
                 self.llm = None # Ensure llm is None if initialization fails
         else:
-             logger.warning(f"Agent '{self.role}' initialized WITHOUT a functional LLM (No API key found/provided).") # Use logger
+             logger.warning(f"Expert '{self.specialty}' initialized WITHOUT a functional LLM (No API key found/provided).") # Use logger
 
         # Initialize other components like memory, potentially based on kwargs or profile
-        self.memory = None # Placeholder for agent memory/chat history
+        self.memory = None # Placeholder for expert memory/chat history
         # TODO: Implement actual memory initialization (e.g., based on kwargs or a Memory class)
-        logger.debug(f"Agent '{self.role}' memory initialized (placeholder).")
+        logger.debug(f"Expert '{self.specialty}' memory initialized (placeholder).")
 
 
     def execute_task(self, task_description: str, context: Optional[str] = None) -> str:
         """
-        Executes a given task description using the configured Gemini LLM.
+        Executes a given operation description using the configured Gemini LLM.
         This method will involve constructing a prompt, interacting with the LLM,
         potentially using tools (future implementation), and applying security checks.
 
         Args:
-            task_description (str): The description of the task to execute.
-            context (Optional[str]): Relevant context from previous tasks or external data.
+            task_description (str): The description of the operation to execute.
+            context (Optional[str]): Relevant context from previous operations or external data.
 
         Returns:
             str: The result generated by the LLM or an error message.
         """
         if not self.llm:
-            logger.error(f"Agent '{self.role}' cannot execute task: LLM not initialized.") # Use logger
-            return f"Error: Agent '{self.role}' cannot execute task. LLM not initialized (check API key and configuration)."
+            logger.error(f"Expert '{self.specialty}' cannot execute operation: LLM not initialized.") # Use logger
+            return f"Error: Expert '{self.specialty}' cannot execute operation. LLM not initialized (check API key and configuration)."
 
-        logger.info(f"Agent '{self.role}' starting task execution: {task_description[:100]}...") # Use logger
+        logger.info(f"Expert '{self.specialty}' starting operation execution: {task_description[:100]}...") # Use logger
 
         # --- Prompt Engineering ---
-        # Construct a prompt incorporating role, goal, task, context, and security constraints.
+        # Construct a prompt incorporating specialty, objective, operation, context, and security constraints.
         # This is a crucial area for security: ensure prompts don't enable injection attacks
         # and guide the LLM towards secure and relevant outputs.
-        prompt = f"You are {self.role}. Your goal is {self.goal}."
-        if self.backstory:
-            prompt += f" Your backstory is: {self.backstory}."
+        prompt = f"You are {self.specialty}. Your objective is {self.objective}."
+        if self.background:
+            prompt += f" Your background is: {self.background}."
         if context:
             prompt += f"\n\nRelevant context:\n{context}"
-        prompt += f"\n\nCurrent Task: {task_description}"
-        prompt += f"\n\nPlease provide the result for this task, keeping in mind your role and goal."
+        prompt += f"\n\nCurrent Operation: {task_description}"
+        prompt += f"\n\nPlease provide the result for this operation, keeping in mind your specialty and objective."
         # TODO: Add specific instructions based on security_profile (e.g., "Do not reveal confidential data", "Sanitize output")
         # TODO: Add specific instructions for tool usage format if tools are implemented
 
         # --- Security Check (Pre-LLM) ---
         # Placeholder call, actual logic is in _is_prompt_secure
         if not self._is_prompt_secure(prompt):
-             logger.error(f"Prompt failed pre-execution security check for agent '{self.role}'. Task aborted.") # Use logger
-             return f"Error: Prompt failed pre-execution security check for agent '{self.role}'."
+             logger.error(f"Prompt failed pre-execution security check for expert '{self.specialty}'. Operation aborted.") # Use logger
+             return f"Error: Prompt failed pre-execution security check for expert '{self.specialty}'."
 
         # --- LLM Interaction ---
         # Basic retry logic implemented below
@@ -129,7 +130,7 @@ class Agent:
         while attempts <= max_retries:
             attempts += 1
             try:
-                logger.debug(f"LLM interaction attempt {attempts} for agent '{self.role}'.")
+                logger.debug(f"LLM interaction attempt {attempts} for expert '{self.specialty}'.")
                 # TODO: Implement actual use of chat history (self.memory) when generating content
                 # Example: history = self.memory.get_history() ... self.llm.generate_content(prompt, history=history)
                 # TODO: Pass configured generation_config/safety_settings to generate_content if implemented in __init__
@@ -140,21 +141,21 @@ class Agent:
                 llm_output = response.text # Accessing the text part of the response
                 if not self._is_output_secure(llm_output):
                     # Handle insecure output (e.g., log, sanitize, return error)
-                    logger.warning(f"LLM output for agent '{self.role}' failed post-execution security check. Output rejected.")
+                    logger.warning(f"LLM output for expert '{self.specialty}' failed post-execution security check. Output rejected.")
                     # TODO: Implement actual sanitization or specific error handling based on policy
-                    return f"Error: Agent '{self.role}' generated an insecure response." # Or return sanitized version
+                    return f"Error: Expert '{self.specialty}' generated an insecure response." # Or return sanitized version
 
                 # If successful, break the loop
-                logger.info(f"Agent '{self.role}' successfully executed task on attempt {attempts}.") # Use logger
+                logger.info(f"Expert '{self.specialty}' successfully executed operation on attempt {attempts}.") # Use logger
                 break # Exit the while loop on success
 
             except Exception as e:
                 # Basic error logging implemented
-                logger.error(f"Attempt {attempts}: Error during LLM interaction for agent '{self.role}': {e}", exc_info=(attempts > max_retries))
+                logger.error(f"Attempt {attempts}: Error during LLM interaction for expert '{self.specialty}': {e}", exc_info=(attempts > max_retries))
                 if attempts > max_retries:
                     # If all retries failed, return an error
                     # TODO: Implement more specific error handling/reporting
-                    return f"Error: Agent '{self.role}' failed to execute task after {attempts} attempts due to LLM error: {e}"
+                    return f"Error: Expert '{self.specialty}' failed to execute operation after {attempts} attempts due to LLM error: {e}"
                 # Optional: Add delay before retry
                 # import time
                 # time.sleep(1)
@@ -165,30 +166,220 @@ class Agent:
              return llm_output
         else:
              # This path indicates an issue with the loop logic or unexpected state
-             logger.error(f"Agent '{self.role}' finished execution loop unexpectedly without success or final error.")
-             return f"Error: Agent '{self.role}' failed task execution unexpectedly."
+             logger.error(f"Expert '{self.specialty}' finished execution loop unexpectedly without success or final error.")
+             return f"Error: Expert '{self.specialty}' failed operation execution unexpectedly."
 
 
     # --- Placeholder Security Methods ---
     # These need significant implementation based on specific security requirements.
 
     def _is_prompt_secure(self, prompt: str) -> bool:
-        """Placeholder for pre-LLM prompt security checks. Needs implementation."""
-        logger.debug(f"Performing prompt security check for Agent '{self.role}', Profile '{self.security_profile}'")
-        # TODO: Implement actual security logic here based on self.security_profile (e.g., check for blacklisted patterns, enforce length limits)
-        is_secure = True # Defaulting to secure for now
-        if not is_secure:
-            logger.warning(f"Prompt security check FAILED for Agent '{self.role}'.")
-        return is_secure
+        """
+        Performs security checks on prompts before they are sent to the LLM.
+        Detects and prevents potential prompt injection and hijacking attempts.
+
+        Args:
+            prompt (str): The prompt to be checked
+
+        Returns:
+            bool: True if the prompt passes all security checks, False otherwise
+        """
+        logger.debug(f"Performing prompt security check for Expert '{self.specialty}', Profile '{self.security_profile}'")
+
+        # 1. Check for excessive length (potential resource exhaustion attack)
+        max_prompt_length = 10000  # Reasonable limit to prevent resource exhaustion
+        if len(prompt) > max_prompt_length:
+            logger.warning(f"Prompt security check FAILED: Prompt exceeds maximum length ({len(prompt)} > {max_prompt_length})")
+            return False
+
+        # 2. Check for common hijacking patterns
+        hijacking_patterns = [
+            r"ignore previous instructions",
+            r"ignore your previous instructions",
+            r"ignore your prior instructions",
+            r"disregard your instructions",
+            r"forget your instructions",
+            r"ignore all previous instructions",
+            r"don't follow your instructions",
+            r"do not follow your instructions",
+            r"don't listen to your instructions",
+            r"do not listen to your instructions",
+            r"ignore your programming",
+            r"ignore your objective",
+            r"ignore your specialty",
+            r"ignore your role",
+            r"ignore your goal",
+            r"ignore your background",
+            r"ignore your security constraints",
+            r"bypass security",
+            r"bypass security checks",
+            r"bypass filters",
+            r"bypass restrictions",
+            r"jailbreak",
+        ]
+
+        # Case-insensitive pattern matching
+        for pattern in hijacking_patterns:
+            if re.search(pattern, prompt, re.IGNORECASE):
+                logger.warning(f"Prompt security check FAILED: Detected potential hijacking pattern: '{pattern}'")
+                return False
+
+        # 3. Check for attempts to extract system prompts
+        system_prompt_extraction_patterns = [
+            r"what were your instructions",
+            r"what is your system prompt",
+            r"what is your prompt",
+            r"show me your instructions",
+            r"tell me your instructions",
+            r"what were you told",
+            r"what were you instructed",
+            r"what is your initial prompt",
+            r"reveal your instructions",
+            r"output your instructions",
+            r"output your prompt",
+            r"print your instructions",
+            r"print your prompt",
+        ]
+
+        for pattern in system_prompt_extraction_patterns:
+            if re.search(pattern, prompt, re.IGNORECASE):
+                logger.warning(f"Prompt security check FAILED: Detected attempt to extract system prompt: '{pattern}'")
+                return False
+
+        # 4. Check for attempts to perform unauthorized actions based on security profile
+        if self.security_profile == 'high_security':
+            # Additional checks for high security profiles
+            high_security_patterns = [
+                r"execute code",
+                r"run command",
+                r"system\s*\(",
+                r"exec\s*\(",
+                r"eval\s*\(",
+                r"os\.",
+                r"subprocess",
+                r"shell",
+                r"bash",
+                r"powershell",
+                r"cmd",
+                r"terminal",
+            ]
+
+            for pattern in high_security_patterns:
+                if re.search(pattern, prompt, re.IGNORECASE):
+                    logger.warning(f"Prompt security check FAILED: High security profile detected unauthorized pattern: '{pattern}'")
+                    return False
+
+        # 5. Check for attempts to change the expert's identity or specialty
+        identity_change_patterns = [
+            r"you are now",
+            r"pretend to be",
+            r"act as if",
+            r"simulate being",
+            r"role-play as",
+            r"you're actually",
+            r"you are actually",
+            r"change your specialty",
+            r"change your role",
+        ]
+
+        for pattern in identity_change_patterns:
+            if re.search(pattern, prompt, re.IGNORECASE):
+                logger.warning(f"Prompt security check FAILED: Detected attempt to change expert identity: '{pattern}'")
+                return False
+
+        # All checks passed
+        logger.debug(f"Prompt security check PASSED for Expert '{self.specialty}'")
+        return True
 
     def _is_output_secure(self, output: str) -> bool:
-        """Placeholder for post-LLM output security checks. Needs implementation."""
-        logger.debug(f"Performing output security check for Agent '{self.role}', Profile '{self.security_profile}'")
-        # TODO: Implement actual security logic here based on self.security_profile (e.g., scan for PII, secrets, harmful content)
-        is_secure = True # Defaulting to secure for now
-        if not is_secure:
-            logger.warning(f"Output security check FAILED for Agent '{self.role}'.")
-        return is_secure
+        """
+        Performs security checks on LLM outputs before they are returned.
+        Detects and prevents potential data leakage and harmful content.
+
+        Args:
+            output (str): The LLM-generated output to be checked
+
+        Returns:
+            bool: True if the output passes all security checks, False otherwise
+        """
+        logger.debug(f"Performing output security check for Expert '{self.specialty}', Profile '{self.security_profile}'")
+
+        if not output:
+            logger.warning("Output security check: Empty output received")
+            return False
+
+        # 1. Check for potential PII leakage
+        pii_patterns = {
+            'email': r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b',
+            'phone': r'\b(\+\d{1,3}[\s-])?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b',
+            'ssn': r'\b\d{3}-\d{2}-\d{4}\b',
+            'credit_card': r'\b(?:\d{4}[- ]?){3}\d{4}\b',
+            'ip_address': r'\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b',
+            'address': r'\b\d+\s+[A-Za-z0-9\s,]+\b(?:street|st|avenue|ave|road|rd|boulevard|blvd|drive|dr|lane|ln|court|ct|plaza|plz|parkway|pkwy)\b',
+        }
+
+        # Apply PII detection based on security profile
+        if self.security_profile in ['high_security', 'pii_protection', 'confidential']:
+            for pii_type, pattern in pii_patterns.items():
+                if re.search(pattern, output, re.IGNORECASE):
+                    logger.warning(f"Output security check FAILED: Detected potential {pii_type} in output")
+                    return False
+
+        # 2. Check for harmful content
+        harmful_content_patterns = [
+            r'\b(?:bomb|explosive|terrorist|terrorism|attack plan)\b',
+            r'\b(?:hack|exploit|vulnerability|attack vector|zero-day)\b',
+            r'\b(?:child abuse|child exploitation)\b',
+            r'\b(?:genocide|mass shooting|school shooting)\b',
+        ]
+
+        # Always check for harmful content regardless of security profile
+        for pattern in harmful_content_patterns:
+            if re.search(pattern, output, re.IGNORECASE):
+                logger.warning(f"Output security check FAILED: Detected potentially harmful content")
+                return False
+
+        # 3. Check for potential data leakage based on security profile
+        if self.security_profile in ['high_security', 'confidential']:
+            # Check for potential internal data markers
+            internal_data_patterns = [
+                r'\b(?:confidential|classified|secret|internal[ -]?only|not for distribution)\b',
+                r'\b(?:proprietary|do not share|restricted access)\b',
+                r'\b(?:internal use|internal document|internal memo)\b',
+            ]
+
+            for pattern in internal_data_patterns:
+                if re.search(pattern, output, re.IGNORECASE):
+                    logger.warning(f"Output security check FAILED: Detected potential confidential information")
+                    return False
+
+        # 4. Check for code injection attempts in the output
+        if self.security_profile in ['high_security', 'code_restricted']:
+            code_patterns = [
+                r'<script.*?>.*?</script>',
+                r'javascript:',
+                r'onerror=',
+                r'onclick=',
+                r'eval\(',
+                r'document\.cookie',
+                r'document\.location',
+                r'window\.location',
+            ]
+
+            for pattern in code_patterns:
+                if re.search(pattern, output, re.IGNORECASE):
+                    logger.warning(f"Output security check FAILED: Detected potential code injection in output")
+                    return False
+
+        # 5. Check output length to prevent resource exhaustion
+        max_output_length = 50000  # Reasonable limit
+        if len(output) > max_output_length:
+            logger.warning(f"Output security check FAILED: Output exceeds maximum length ({len(output)} > {max_output_length})")
+            return False
+
+        # All checks passed
+        logger.debug(f"Output security check PASSED for Expert '{self.specialty}'")
+        return True
 
 
     # TODO: Implement methods for tool validation, secure communication handling, etc.
