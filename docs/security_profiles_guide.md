@@ -242,3 +242,4 @@ def _validate_operation_security(self, operation: Operation, index: int) -> bool
 When operations are executed in a sequential process, security considerations from earlier operations can influence later ones. The framework implements security profile inheritance to ensure consistent security enforcement throughout the execution chain.
 
 For example, if an operation with a `high_security` profile passes context to an operation with a `default` profile, the framework will apply additional security checks to ensure the integrity of the execution chain is maintained.
+

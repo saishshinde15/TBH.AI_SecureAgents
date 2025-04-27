@@ -1,6 +1,6 @@
 # Installation
 
-![TBH.AI Logo](./assets/logo.png) <!-- Placeholder - Save logo here -->
+![TBH Secure Agents Logo](./assets/logo.png)
 
 This guide explains how to install the `tbh_secure_agents` package.
 

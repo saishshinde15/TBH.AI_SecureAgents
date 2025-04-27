@@ -1,6 +1,6 @@
 # Usage Guide
 
-![TBH.AI Logo](./assets/logo.png) <!-- Placeholder - Save logo here -->
+![TBH Secure Agents Logo](./assets/logo.png)
 
 This guide explains the core concepts of `tbh_secure_agents` and how to use them to build your multi-agent system.
 

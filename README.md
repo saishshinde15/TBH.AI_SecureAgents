@@ -1,6 +1,6 @@
 # TBH Secure Agents
 
-[![PyPI version](https://badge.fury.io/py/tbh_secure_agents.svg)](https://badge.fury.io/py/tbh_secure_agents) <!-- Placeholder badge -->
+<img width="618" alt="Main" src="https://github.com/user-attachments/assets/dbbf5a4f-7b0b-4f43-9b37-ef77dc761ff1" /> <!-- Placeholder badge --> <!-- Placeholder badge -->
 
 **A secure multi-agent framework by TBH.AI focused on high security.**
 
@@ -68,5 +68,5 @@ This project is licensed under the MIT License - see the `LICENSE` file for deta
 
 ## Contact
 
-TBH.AI - [Your Company Website/Contact]
-Saish - [Your Contact/GitHub Profile]
+TBH.AI 
+Saish - saish.shinde.jb@gmail.com
