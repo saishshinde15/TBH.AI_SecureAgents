@@ -14,44 +14,21 @@ This guide explains how to install the `tbh_secure_agents` package.
 
 ## Installation from PyPI (Recommended)
 
-Once the package is published to the Python Package Index (PyPI), you can install it directly using pip:
+The package is published to the Python Package Index (PyPI) and can be installed directly using pip:
 
 ```bash
-pip install tbh_secure_agents
+pip install tbh-secure-agents
 ```
-*(Note: This command will only work after the package has been successfully published to PyPI.)*
 
-## Installation from Source (for Development)
+Note that the package name uses hyphens (`tbh-secure-agents`) rather than underscores when installing with pip.
 
-If you want to install the package directly from the source code (e.g., after cloning the repository for development):
+This is a closed-source package with proprietary security implementations. The installation provides you with the necessary interfaces to build secure multi-agent systems without exposing the internal security mechanisms.
 
-1.  **Clone the Repository (if applicable):**
-    ```bash
-    git clone https://github.com/saishshinde15/TBH.AI_SecureAgents.git # Updated URL
-    cd TBH.AI_SecureAgents # Updated directory name based on repo name
-    ```
+## Source Code Access
 
-2.  **Create and Activate a Virtual Environment (Recommended):**
-    ```bash
-    # Create environment
-    python -m venv venv
-    # Activate environment
-    # Windows (CMD/PowerShell):
-    venv\Scripts\activate
-    # Linux/macOS:
-    source venv/bin/activate
-    ```
+This package is distributed as a closed-source solution to protect the proprietary security mechanisms and intellectual property. The source code is not publicly available for direct installation or modification.
 
-3.  **Install in Editable Mode:** This allows you to make changes to the source code and have them reflected immediately without reinstalling.
-    ```bash
-    pip install -e .
-    ```
-    This command installs the package along with its core dependencies (like `google-generativeai`).
-
-4.  **Install Development Dependencies (Optional):** If you plan to contribute or run tests, install the development extras:
-    ```bash
-    pip install -e .[dev]
-    ```
+If you're interested in contributing to the project or need access to the source code for specific use cases, please contact the maintainers at saish.shinde15@gmail.com for more information about partnership opportunities.
 
 ## Verifying Installation
 

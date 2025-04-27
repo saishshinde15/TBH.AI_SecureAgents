@@ -2,24 +2,37 @@
 
 <img width="618" alt="Main" src="https://github.com/user-attachments/assets/dbbf5a4f-7b0b-4f43-9b37-ef77dc761ff1" /> <!-- Placeholder badge --> <!-- Placeholder badge -->
 
-**A secure multi-agent framework by TBH.AI focused on high security.**
+**A secure multi-agent framework by TBH.AI focused on high security, reliability, and safe AI orchestration.**
 
-This package provides tools and structures for building multi-agent systems with a strong emphasis on security principles. Developed by Saish at TBH.AI.
+This package provides tools and structures for building multi-agent systems with a strong emphasis on security principles. It enables developers to create, manage, and deploy teams of AI experts (agents) that can work together on complex tasks while maintaining robust security controls to prevent common vulnerabilities in AI systems.
 
-## Key Features (Planned)
+TBH Secure Agents addresses critical security concerns in multi-agent systems including agent hijacking, data leakage, exploitation between agents, and reliability issues. The framework is designed for developers who need to build secure, production-ready multi-agent applications.
 
-*   **High Security Focus:** Built with security best practices from the ground up. (Details TBD)
-*   **Modular Agent Design:** Easily define and customize agents.
-*   **Flexible Task Management:** Define complex workflows and tasks for agents.
-*   **Secure Communication:** Mechanisms for secure inter-agent communication. (Details TBD)
-*   **(Other differentiating features...)**
+Developed by Saish at TBH.AI.
+
+## Key Features
+
+*   **High Security Focus:** Built with security best practices from the ground up, including:
+    * Agent hijacking prevention
+    * Data leakage protection
+    * Multi-agent exploitation prevention
+    * Reliability enhancements to reduce hallucinations
+*   **Modular Expert Design:** Easily define and customize experts with specific specialties and security profiles.
+*   **Flexible Operation Management:** Define complex workflows and operations with clear input/output specifications.
+*   **Secure Communication:** Mechanisms for secure inter-expert communication with context validation.
+*   **Comprehensive Security Documentation:** Detailed guides on security profiles, checkpoints, and implementation details.
 
 ## Installation
 
+The package is available on PyPI and can be installed with a simple pip command:
+
 ```bash
-pip install tbh_secure_agents
+pip install tbh-secure-agents
 ```
-*(Note: Package not yet available on PyPI)*
+
+Note that the package name uses hyphens (`tbh-secure-agents`) rather than underscores when installing with pip.
+
+This is a closed-source package with proprietary security implementations. The installation provides you with the necessary interfaces to build secure multi-agent systems without exposing the internal security mechanisms.
 
 ## Documentation
 
@@ -31,31 +44,50 @@ Full documentation, including installation instructions, usage guides, and detai
 
 ## Getting Started (Quick Example)
 
-Here's a conceptual example:
+Here's a simple example of how to use the package:
 
 ```python
-# Example Usage (Conceptual) - See docs/usage_guide.md for details
-# from tbh_secure_agents import Expert, Operation, Squad
+from tbh_secure_agents import Expert, Operation, Squad
 
 # Define experts with specific specialties and security contexts
-# security_researcher = Expert(specialty='Security Researcher', objective='Identify vulnerabilities', security_profile='high')
-# reporting_expert = Expert(specialty='Reporter', objective='Summarize findings securely', security_profile='medium')
+security_researcher = Expert(
+    specialty='Security Researcher',
+    objective='Identify vulnerabilities',
+    background='Experienced in security analysis',
+    security_profile='high_security'
+)
+
+reporting_expert = Expert(
+    specialty='Technical Writer',
+    objective='Summarize findings securely',
+    background='Specializes in clear technical documentation',
+    security_profile='medium_security'
+)
 
 # Define operations
-# research_operation = Operation(instructions='Analyze system X for security flaws', expert=security_researcher)
-# reporting_operation = Operation(instructions='Compile a secure report of findings', expert=reporting_expert)
+research_operation = Operation(
+    instructions='Analyze system X for security flaws',
+    output_format='A detailed analysis with vulnerability findings',
+    expert=security_researcher
+)
+
+reporting_operation = Operation(
+    instructions='Compile a secure report of findings',
+    output_format='A concise executive summary with key vulnerabilities',
+    expert=reporting_expert
+)
 
 # Form a squad
-# security_squad = Squad(
-#     experts=[security_researcher, reporting_expert],
-#     operations=[research_operation, reporting_operation],
-#     verbose=True # Or configure security logging
-# )
+security_squad = Squad(
+    experts=[security_researcher, reporting_expert],
+    operations=[research_operation, reporting_operation],
+    process='sequential'  # Operations run in sequence, passing results as context
+)
 
 # Deploy the squad
-# result = security_squad.deploy()
+result = security_squad.deploy()
 
-# print(result) # Securely handled output
+print(result)  # Securely handled output
 ```
 
 ## Contributing
