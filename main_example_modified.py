@@ -15,7 +15,7 @@ import sys
 from tbh_secure_agents import Expert, Operation, Squad
 
 # Set the API key for Google Gemini
-os.environ["GOOGLE_API_KEY"] = "AIzaSyAwkWbBba6t9O15Ok0bsxFmBRoFfhokmVA"
+os.environ["GOOGLE_API_KEY"] = ""
 
 def main():
     print("\n" + "="*80)
