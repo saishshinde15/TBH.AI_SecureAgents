@@ -55,8 +55,8 @@ operation_blurb = Operation(
 print("\n--- Creating Squad (Story Concept & Marketing) ---")
 # Create Squad
 story_squad = Squad(
-    agents=[story_writer, marketer],
-    tasks=[operation_concept, operation_blurb],
+    experts=[story_writer, marketer],
+    operations=[operation_concept, operation_blurb],
     process='sequential'
 )
 

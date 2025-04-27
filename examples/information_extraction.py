@@ -66,8 +66,8 @@ operation_report = Operation(
 print("\n--- Creating Squad (Information Extraction) ---")
 # Create Squad
 analysis_squad = Squad(
-    agents=[extractor, reporter],
-    tasks=[operation_extract, operation_report],
+    experts=[extractor, reporter],
+    operations=[operation_extract, operation_report],
     process='sequential'
 )
 

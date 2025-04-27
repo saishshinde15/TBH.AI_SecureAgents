@@ -23,8 +23,8 @@ The framework revolves around three main components:
     *   Optional `context` providing necessary background information.
 
 3.  **`Squad`**: Manages a group of experts and orchestrates the execution of a list of operations. Key aspects include:
-    *   A list of `agents` (experts).
-    *   A list of `tasks` (operations).
+    *   A list of `experts`.
+    *   A list of `operations`.
     *   A `process` defining the execution flow (currently supports 'sequential', where operations run one after another, passing results as context).
 
 ## Basic Workflow
@@ -75,8 +75,8 @@ Building an application with `tbh_secure_agents` typically involves these steps:
 4.  **Assemble the Squad:** Create an instance of the `Squad` class, passing in the list of experts and operations. Specify the execution process (e.g., 'sequential').
     ```python
     security_squad = Squad(
-        agents=[researcher, writer],
-        tasks=[operation1, operation2],
+        experts=[researcher, writer],
+        operations=[operation1, operation2],
         process='sequential'
     )
     ```

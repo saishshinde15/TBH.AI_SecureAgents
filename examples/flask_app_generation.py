@@ -55,8 +55,8 @@ operation_readme = Operation(
 print("\n--- Creating Squad (Flask App Generation) ---")
 # Create Squad
 flask_squad = Squad(
-    agents=[flask_dev, readme_writer],
-    tasks=[operation_flask_code, operation_readme],
+    experts=[flask_dev, readme_writer],
+    operations=[operation_flask_code, operation_readme],
     process='sequential'
 )
 

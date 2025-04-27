@@ -21,25 +21,25 @@ class Squad:
     Manages a group of experts and orchestrates the execution of a sequence of operations.
 
     Attributes:
-        agents (List[Expert]): A list of Expert objects part of this squad.
-        tasks (List[Operation]): A list of Operation objects to be executed by the squad.
+        experts (List[Expert]): A list of Expert objects part of this squad.
+        operations (List[Operation]): A list of Operation objects to be executed by the squad.
         process (str): The execution process ('sequential', 'hierarchical', etc.). Defaults to 'sequential'.
         # Add attributes like memory, security_manager, etc.
     """
-    def __init__(self, agents: List[Expert], tasks: List[Operation], process: str = 'sequential', **kwargs):
-        self.agents = agents
-        self.tasks = tasks
+    def __init__(self, experts: List[Expert], operations: List[Operation], process: str = 'sequential', **kwargs):
+        self.experts = experts
+        self.operations = operations
         self.process = process # Example: 'sequential', 'hierarchical'
         # TODO: Implement initialization of security manager/context for the squad
         # TODO: Implement validation of expert compatibility and operation assignments based on security profiles
 
-        if not agents:
+        if not experts:
             raise ValueError("Squad must have at least one expert.")
-        if not tasks:
+        if not operations:
             logger.error("Squad initialization failed: Must have at least one operation.") # Use logger
             raise ValueError("Squad must have at least one operation.")
 
-        logger.info(f"Squad initialized with {len(self.agents)} experts and {len(self.tasks)} operations. Process: {self.process}") # Use logger
+        logger.info(f"Squad initialized with {len(self.experts)} experts and {len(self.operations)} operations. Process: {self.process}") # Use logger
 
     def deploy(self) -> Optional[str]:
         """
@@ -60,31 +60,31 @@ class Squad:
         final_output: Optional[str] = None
         # Store outputs to potentially pass as context to next operations
         # Key: Operation instructions (or a unique operation ID), Value: Operation result
-        task_outputs: Dict[str, str] = {}
+        operation_outputs: Dict[str, str] = {}
 
         # Track execution metrics for security monitoring
         self.execution_metrics = {
             'start_time': time.time(),
             'operations_completed': 0,
             'operations_failed': 0,
-            'total_operations': len(self.tasks),
+            'total_operations': len(self.operations),
             'execution_path': []
         }
 
-        for i, task in enumerate(self.tasks):
+        for i, operation in enumerate(self.operations):
             # Record operation in execution path for auditing
             operation_record = {
                 'index': i,
-                'instructions': task.instructions[:100] + ('...' if len(task.instructions) > 100 else ''),
+                'instructions': operation.instructions[:100] + ('...' if len(operation.instructions) > 100 else ''),
                 'start_time': time.time(),
                 'status': 'pending'
             }
             self.execution_metrics['execution_path'].append(operation_record)
 
             # Security check: Validate operation before assignment
-            logger.debug(f"Validating operation {i+1}/{len(self.tasks)}: '{task.instructions[:30]}...'")
-            if not self._validate_operation_security(task, i):
-                logger.error(f"Operation validation failed for operation {i+1}: '{task.instructions[:30]}...'")
+            logger.debug(f"Validating operation {i+1}/{len(self.operations)}: '{operation.instructions[:30]}...'")
+            if not self._validate_operation_security(operation, i):
+                logger.error(f"Operation validation failed for operation {i+1}: '{operation.instructions[:30]}...'")
                 operation_record['status'] = 'validation_failed'
                 self.execution_metrics['operations_failed'] += 1
                 if self.process == 'sequential':
@@ -93,46 +93,46 @@ class Squad:
                     continue  # Skip this operation but continue with others for non-sequential processes
 
             # Assign expert if not already assigned
-            if not task.expert:
+            if not operation.expert:
                 # Implement more sophisticated expert assignment logic based on specialty matching
-                best_expert = self._find_best_expert_for_operation(task)
+                best_expert = self._find_best_expert_for_operation(operation)
                 if best_expert:
-                    task.expert = best_expert
-                    logger.info(f"Assigning Operation '{task.instructions[:30]}...' to Expert '{best_expert.specialty}'")
+                    operation.expert = best_expert
+                    logger.info(f"Assigning Operation '{operation.instructions[:30]}...' to Expert '{best_expert.specialty}'")
                 else:
                     # Fallback to simple assignment if no good match
-                    assigned_expert = self.agents[i % len(self.agents)]
-                    task.expert = assigned_expert
-                    logger.info(f"Assigning Operation '{task.instructions[:30]}...' to Expert '{assigned_expert.specialty}' (default assignment)")
+                    assigned_expert = self.experts[i % len(self.experts)]
+                    operation.expert = assigned_expert
+                    logger.info(f"Assigning Operation '{operation.instructions[:30]}...' to Expert '{assigned_expert.specialty}' (default assignment)")
             else: # Expert was pre-assigned
-                logger.info(f"Operation '{task.instructions[:30]}...' already assigned to Expert '{task.expert.specialty}'")
+                logger.info(f"Operation '{operation.instructions[:30]}...' already assigned to Expert '{operation.expert.specialty}'")
 
             # --- Context Passing with Security Checks ---
             if i > 0 and self.process == 'sequential':
-                previous_operation = self.tasks[i-1]
+                previous_operation = self.operations[i-1]
                 if previous_operation.result:
                     # Check if previous result is safe to pass as context
-                    if self._is_safe_for_context_passing(previous_operation.result, task):
+                    if self._is_safe_for_context_passing(previous_operation.result, operation):
                         # Securely format and append previous result to current context
                         new_context = f"Output from previous operation ({previous_operation.instructions[:30]}...): {previous_operation.result}"
-                        if task.context:
-                            task.context += f"\n\n{new_context}"
+                        if operation.context:
+                            operation.context += f"\n\n{new_context}"
                         else:
-                            task.context = new_context
-                        logger.debug(f"Injecting context from previous operation into Operation '{task.instructions[:30]}...'")
+                            operation.context = new_context
+                        logger.debug(f"Injecting context from previous operation into Operation '{operation.instructions[:30]}...'")
                     else:
-                        logger.warning(f"Context passing blocked: Previous result deemed unsafe for operation '{task.instructions[:30]}...'")
+                        logger.warning(f"Context passing blocked: Previous result deemed unsafe for operation '{operation.instructions[:30]}...'")
 
             # Set operation timeout for safety
-            operation_timeout = self._calculate_operation_timeout(task)
+            operation_timeout = self._calculate_operation_timeout(operation)
             operation_start_time = time.time()
 
             try:
                 # Execute the operation with timeout monitoring
-                logger.info(f"Executing operation {i+1}/{len(self.tasks)}: '{task.instructions[:30]}...'")
+                logger.info(f"Executing operation {i+1}/{len(self.operations)}: '{operation.instructions[:30]}...'")
 
                 # Execute the operation
-                output = task.execute()
+                output = operation.execute()
 
                 # Check execution time
                 execution_time = time.time() - operation_start_time
@@ -145,8 +145,8 @@ class Squad:
 
                 if output: # Store output only if execution was successful
                     # Perform additional security check on output
-                    if self._is_output_safe(output, task):
-                        task_outputs[task.instructions] = output
+                    if self._is_output_safe(output, operation):
+                        operation_outputs[operation.instructions] = output
                         final_output = output # Keep track of the last output as the final one (for sequential)
                         operation_record['status'] = 'completed'
                         self.execution_metrics['operations_completed'] += 1
@@ -172,11 +172,11 @@ class Squad:
                 self.execution_metrics['operations_failed'] += 1
 
                 # Log error
-                logger.error(f"Squad execution failed during operation {i+1}: '{task.instructions[:50]}...': {e}", exc_info=True)
+                logger.error(f"Squad execution failed during operation {i+1}: '{operation.instructions[:50]}...': {e}", exc_info=True)
 
                 # Handle failure based on process type
                 if self.process == 'sequential':
-                    return f"Squad execution failed: Error during operation {i+1}: '{task.instructions[:50]}...'"
+                    return f"Squad execution failed: Error during operation {i+1}: '{operation.instructions[:50]}...'"
                 # For non-sequential processes, we might continue with other operations
 
         # Update execution metrics
@@ -206,16 +206,16 @@ class Squad:
         logger.debug("Validating squad security...")
 
         # 1. Check if there are any experts and operations
-        if not self.agents:
+        if not self.experts:
             logger.error("Squad security validation failed: No experts in squad")
             return False
 
-        if not self.tasks:
+        if not self.operations:
             logger.error("Squad security validation failed: No operations in squad")
             return False
 
         # 2. Check for expert security profiles
-        security_profiles = [expert.security_profile for expert in self.agents if hasattr(expert, 'security_profile')]
+        security_profiles = [expert.security_profile for expert in self.experts if hasattr(expert, 'security_profile')]
         if not security_profiles or any(not profile for profile in security_profiles):
             logger.warning("Squad security validation: Some experts have no security profile")
             # Warning only, not a failure
@@ -223,24 +223,24 @@ class Squad:
         # 3. Check for potential circular dependencies or infinite loops in operations
         # This is a simplified check - in a real system, you would have more sophisticated
         # dependency analysis
-        if self.process == 'sequential' and len(self.tasks) > 20:
+        if self.process == 'sequential' and len(self.operations) > 20:
             logger.warning("Squad security validation: Large number of sequential operations may indicate inefficiency")
             # Warning only, not a failure
 
         # 4. Check for expert-operation compatibility
-        for task in self.tasks:
-            if task.expert and not hasattr(task.expert, 'execute_task'):
-                logger.error(f"Squad security validation failed: Expert assigned to operation '{task.instructions[:30]}...' lacks execute_task method")
+        for operation in self.operations:
+            if operation.expert and not hasattr(operation.expert, 'execute_task'):
+                logger.error(f"Squad security validation failed: Expert assigned to operation '{operation.instructions[:30]}...' lacks execute_task method")
                 return False
 
         # 5. Check for duplicate operations (potential redundancy attack)
-        operation_instructions = [task.instructions for task in self.tasks]
+        operation_instructions = [operation.instructions for operation in self.operations]
         if len(operation_instructions) != len(set(operation_instructions)):
             logger.warning("Squad security validation: Duplicate operation instructions detected")
             # Warning only, not a failure
 
         # 6. Check for excessive resource usage
-        total_instruction_length = sum(len(task.instructions) for task in self.tasks)
+        total_instruction_length = sum(len(operation.instructions) for operation in self.operations)
         if total_instruction_length > 100000:  # Arbitrary limit
             logger.error(f"Squad security validation failed: Total operation instructions too long ({total_instruction_length} chars)")
             return False
@@ -368,7 +368,7 @@ class Squad:
         Returns:
             Optional[Expert]: The best matching expert, or None if no good match is found
         """
-        if not self.agents:
+        if not self.experts:
             return None
 
         # Simple keyword matching between operation instructions and expert specialty
@@ -376,7 +376,7 @@ class Squad:
         best_match = None
         best_score = 0
 
-        for expert in self.agents:
+        for expert in self.experts:
             if not hasattr(expert, 'specialty') or not expert.specialty:
                 continue
 

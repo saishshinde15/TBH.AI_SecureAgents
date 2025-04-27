@@ -227,16 +227,16 @@ def _validate_squad_security(self) -> bool:
     logger.debug("Validating squad security...")
 
     # 1. Check if there are any experts and operations
-    if not self.agents:
+    if not self.experts:
         logger.error("Squad security validation failed: No experts in squad")
         return False
 
-    if not self.tasks:
+    if not self.operations:
         logger.error("Squad security validation failed: No operations in squad")
         return False
 
     # 2. Check for excessive resource usage
-    total_instruction_length = sum(len(task.instructions) for task in self.tasks)
+    total_instruction_length = sum(len(operation.instructions) for operation in self.operations)
     if total_instruction_length > 100000:  # Arbitrary limit
         logger.error(f"Squad security validation failed: Total operation instructions too long")
         return False
@@ -388,7 +388,7 @@ self.execution_metrics = {
     'start_time': time.time(),
     'operations_completed': 0,
     'operations_failed': 0,
-    'total_operations': len(self.tasks),
+    'total_operations': len(self.operations),
     'execution_path': []
 }
 ```

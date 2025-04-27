@@ -81,8 +81,8 @@ operation_refactor = Operation(
 
 print("\n--- Creating Squad (Code Security Review) ---")
 security_analysis_squad = Squad(
-    agents=[reviewer, advisor, refactorer],
-    tasks=[operation_review, operation_suggest, operation_refactor],
+    experts=[reviewer, advisor, refactorer],
+    operations=[operation_review, operation_suggest, operation_refactor],
     process='sequential'
 )
 

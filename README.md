@@ -47,8 +47,8 @@ Here's a conceptual example:
 
 # Form a squad
 # security_squad = Squad(
-#     agents=[security_researcher, reporting_expert],
-#     tasks=[research_operation, reporting_operation],
+#     experts=[security_researcher, reporting_expert],
+#     operations=[research_operation, reporting_operation],
 #     verbose=True # Or configure security logging
 # )
 
@@ -68,5 +68,5 @@ This project is licensed under the MIT License - see the `LICENSE` file for deta
 
 ## Contact
 
-TBH.AI 
+TBH.AI
 Saish - saish.shinde.jb@gmail.com
