@@ -1,6 +1,6 @@
 # Security Features in TBH Secure Agents Framework
 
-![TBH Secure Agents Logo](./assets/logo.png)
+<img width="618" alt="Main" src="https://github.com/user-attachments/assets/dbbf5a4f-7b0b-4f43-9b37-ef77dc761ff1" />
 
 This document outlines the security features implemented in the TBH Secure Agents framework to address common security challenges in multi-agent systems.
 
