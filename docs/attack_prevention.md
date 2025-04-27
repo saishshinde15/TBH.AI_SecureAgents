@@ -1,6 +1,6 @@
 # Attack Prevention in TBH Secure Agents Framework
 
-![TBH Secure Agents Logo](./assets/logo.png)
+<img width="618" alt="Main" src="https://github.com/user-attachments/assets/dbbf5a4f-7b0b-4f43-9b37-ef77dc761ff1" />
 
 This document outlines the specific attacks and security threats that the TBH Secure Agents framework is designed to prevent or mitigate. The security features are organized by attack category to provide a clear understanding of the framework's security capabilities.
 
