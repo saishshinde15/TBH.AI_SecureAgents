@@ -1,0 +1,164 @@
+================================================================================
+                   TBH SECURE AGENTS - MODIFIED MAIN EXAMPLE                    
+================================================================================
+
+Creating secure experts with specialized security profiles...
+
+2025-04-27 20:14:33,645 - tbh_secure_agents.agent - INFO - Gemini API configured.
+2025-04-27 20:14:33,645 - tbh_secure_agents.agent - INFO - Expert 'Technology Researcher' initialized with Gemini model 'gemini-2.0-flash-lite' and security profile 'medium_security'.
+2025-04-27 20:14:33,645 - tbh_secure_agents.agent - INFO - Gemini API configured.
+2025-04-27 20:14:33,645 - tbh_secure_agents.agent - INFO - Expert 'Business Analyst' initialized with Gemini model 'gemini-2.0-flash-lite' and security profile 'medium_security'.
+2025-04-27 20:14:33,646 - tbh_secure_agents.agent - INFO - Gemini API configured.
+2025-04-27 20:14:33,646 - tbh_secure_agents.agent - INFO - Expert 'Technical Writer' initialized with Gemini model 'gemini-2.0-flash-lite' and security profile 'medium_security'.
+Defining secure operations with clear instructions and output formats...
+
+Assembling secure squad with multiple experts and sequential operations...
+
+2025-04-27 20:14:33,646 - tbh_secure_agents.crew - INFO - Squad initialized with 3 experts and 3 operations. Process: sequential
+Deploying squad with security controls and monitoring...
+
+2025-04-27 20:14:33,646 - tbh_secure_agents.crew - INFO - Squad deployment initiated...
+2025-04-27 20:14:33,646 - tbh_secure_agents.crew - INFO - Operation '
+        Research the latest t...' already assigned to Expert 'Technology Researcher'
+2025-04-27 20:14:33,646 - tbh_secure_agents.crew - INFO - Executing operation 1/3: '
+        Research the latest t...'
+2025-04-27 20:14:33,647 - tbh_secure_agents.task - INFO - Operation '
+        Research the latest trends in cloud compu...' starting execution by expert 'Technology Researcher'.
+2025-04-27 20:14:33,647 - tbh_secure_agents.agent - INFO - Expert 'Technology Researcher' starting operation execution: 
+        Research the latest trends in cloud computing for small businesses.
+        Focus on:
+     ...
+2025-04-27 20:14:41,964 - tbh_secure_agents.agent - INFO - Expert 'Technology Researcher' successfully executed operation on attempt 1.
+2025-04-27 20:14:41,969 - tbh_secure_agents.task - INFO - Operation '
+        Research the latest trends in cloud compu...' finished execution successfully.
+2025-04-27 20:14:41,971 - tbh_secure_agents.crew - INFO - Operation 1 completed successfully in 8.32s
+2025-04-27 20:14:41,971 - tbh_secure_agents.crew - INFO - Operation '
+        Based on the research...' already assigned to Expert 'Business Analyst'
+2025-04-27 20:14:41,973 - tbh_secure_agents.crew - INFO - Executing operation 2/3: '
+        Based on the research...'
+2025-04-27 20:14:41,973 - tbh_secure_agents.task - INFO - Operation '
+        Based on the research findings, analyze h...' starting execution by expert 'Business Analyst'.
+2025-04-27 20:14:41,973 - tbh_secure_agents.agent - INFO - Expert 'Business Analyst' starting operation execution: 
+        Based on the research findings, analyze how small businesses can best 
+        implement cl...
+2025-04-27 20:14:54,280 - tbh_secure_agents.agent - INFO - Expert 'Business Analyst' successfully executed operation on attempt 1.
+2025-04-27 20:14:54,285 - tbh_secure_agents.task - INFO - Operation '
+        Based on the research findings, analyze h...' finished execution successfully.
+2025-04-27 20:14:54,287 - tbh_secure_agents.crew - INFO - Operation 2 completed successfully in 12.31s
+2025-04-27 20:14:54,287 - tbh_secure_agents.crew - INFO - Operation '
+        Create a comprehensiv...' already assigned to Expert 'Technical Writer'
+2025-04-27 20:14:54,289 - tbh_secure_agents.crew - INFO - Executing operation 3/3: '
+        Create a comprehensiv...'
+2025-04-27 20:14:54,289 - tbh_secure_agents.task - INFO - Operation '
+        Create a comprehensive report on cloud co...' starting execution by expert 'Technical Writer'.
+2025-04-27 20:14:54,289 - tbh_secure_agents.agent - INFO - Expert 'Technical Writer' starting operation execution: 
+        Create a comprehensive report on cloud computing for small businesses
+        based on the ...
+2025-04-27 20:15:04,246 - tbh_secure_agents.agent - INFO - Expert 'Technical Writer' successfully executed operation on attempt 1.
+2025-04-27 20:15:04,251 - tbh_secure_agents.task - INFO - Operation '
+        Create a comprehensive report on cloud co...' finished execution successfully.
+2025-04-27 20:15:04,253 - tbh_secure_agents.crew - INFO - Operation 3 completed successfully in 9.96s
+2025-04-27 20:15:04,253 - tbh_secure_agents.crew - INFO - Squad deployment finished. Execution time: 30.61s, Operations completed: 3, Operations failed: 0
+
+================================================================================
+                             FINAL BUSINESS REPORT                              
+================================================================================
+
+## Cloud Computing for Small Businesses: A Strategic Guide
+
+**Executive Summary:**
+
+This report provides a comprehensive guide for small businesses seeking to leverage the power of cloud computing. It outlines the key considerations, recommended approaches, and expected benefits of migrating to the cloud, empowering business owners to make informed decisions and drive sustainable growth. The cloud offers significant advantages, including cost savings, increased agility, enhanced collaboration, and improved data security. This report details how to navigate the implementation process, from resource allocation and training to phased migration strategies and ongoing optimization. By adopting a strategic approach and prioritizing security, cost optimization, and continuous evaluation, small businesses can unlock the full potential of the cloud and gain a competitive edge.
+
+---
+
+**1. Cloud Technology Overview:**
+
+Cloud computing offers on-demand access to a shared pool of computing resources (servers, storage, applications, and services) over the internet. For small businesses, the most relevant cloud service models are:
+
+*   **Software as a Service (SaaS):** Applications are delivered over the internet (e.g., Salesforce, Microsoft 365, Google Workspace). Businesses subscribe to the service, eliminating the need for local installation and maintenance.
+*   **Platform as a Service (PaaS):** Provides a platform for developing, running, and managing applications (e.g., AWS Elastic Beanstalk, Google App Engine, Azure App Service). This offers developers the tools and infrastructure needed to build and deploy applications without managing the underlying infrastructure.
+*   **Infrastructure as a Service (IaaS):** Provides access to fundamental computing resources like servers, storage, and networking (e.g., Amazon Web Services (AWS), Microsoft Azure, Google Cloud Platform (GCP)). Businesses have complete control over the infrastructure and are responsible for managing the operating system, middleware, and applications.
+
+**Benefits of Cloud Adoption:**
+
+*   **Cost Savings:** Reduced upfront capital expenditure on hardware and software, lower operational costs (IT staff, energy), and pay-as-you-go pricing.
+*   **Increased Agility and Scalability:** Easily scale resources up or down based on business needs, enabling faster response to market changes.
+*   **Enhanced Collaboration:** Improved communication and teamwork through cloud-based collaboration tools.
+*   **Improved Data Security and Compliance:** Robust security measures, disaster recovery capabilities, and adherence to industry regulations.
+*   **Focus on Core Business:** Freed-up IT resources to focus on strategic initiatives.
+
+---
+
+**2. Implementation Considerations:**
+
+Successfully implementing cloud solutions requires careful planning and execution. This section outlines key considerations:
+
+*   **2.1. Resource Requirements:**
+    *   **Financial Resources:**
+        *   **Initial Investment:** Costs associated with consulting, data migration, and potential hardware upgrades.
+        *   **Ongoing Operational Expenses:** Subscription fees, pay-as-you-go charges, and maintenance costs.
+        *   **Cost Optimization:** Strategies like right-sizing and automated scaling to control spending.
+    *   **Human Resources:**
+        *   **Internal Expertise:** Assess existing IT skills and identify training needs.
+        *   **External Support:** Leverage cloud consultants or Managed Service Providers (MSPs) for assessment, implementation, and ongoing management.
+        *   **Dedicated Project Team:** Assemble a team with defined roles (project manager, technical lead, business representatives).
+    *   **Technical Resources:**
+        *   **Network Infrastructure:** Ensure reliable, high-speed internet connectivity.
+        *   **Hardware and Software:** Assess compatibility and plan for necessary upgrades.
+        *   **Data Migration Tools:** Invest in tools for data transfer and conversion.
+        *   **Security Tools:** Implement cloud security solutions like firewalls and monitoring tools.
+*   **2.2. Training Needs:**
+    *   **Comprehensive Training Plan:** Develop a structured plan based on chosen cloud services and skill gaps.
+    *   **Training Levels:**
+        *   **Executive Level:** Cloud computing basics, ROI, and strategic implications.
+        *   **IT Staff:** In-depth training on platform administration, security, networking, and integration.
+        *   **End-Users:** Training on SaaS applications and collaboration tools.
+    *   **Training Methods:** Formal courses, hands-on workshops, internal mentoring, and documentation.
+    *   **Continuous Learning:** Encourage ongoing training to stay current with cloud technologies.
+*   **2.3. Implementation Timeline:**
+    *   **Phase 1: Planning and Assessment (1-4 weeks):** Needs assessment, solution selection, cost analysis, migration strategy, security assessment, vendor selection.
+    *   **Phase 2: Proof of Concept (POC) and Pilot (2-4 weeks):** Test selected services in a limited environment, evaluate performance, and refine the implementation plan.
+    *   **Phase 3: Migration and Implementation (Variable):** Data migration, application deployment, integration, and security configuration.
+    *   **Phase 4: Go-Live and Optimization (Ongoing):** Full deployment, user training, performance and security monitoring, cost optimization, and continuous review.
+
+---
+
+**3. Recommended Approach:**
+
+A well-defined approach minimizes risk and maximizes the benefits of cloud adoption. Consider the following:
+
+*   **3.1. Define Clear Objectives:** Start with specific business goals and identify how cloud solutions will address them.
+*   **3.2. Prioritize SaaS Adoption:** Leverage readily available SaaS applications for immediate productivity gains and cost savings.
+*   **3.3. Adopt a Phased Implementation:** Begin with low-risk applications and data to minimize disruption and enable iterative learning.
+*   **3.4. Invest in Training:** Prioritize comprehensive training for IT staff and end-users, and consider the use of cloud consultants.
+*   **3.5. Prioritize Security and Compliance:** Implement robust security measures and adhere to industry regulations from the start. Choose cloud providers with strong security certifications.
+*   **3.6. Implement Cost Optimization Strategies:** Implement cost-saving measures (right-sizing, automated scaling, tiering), and monitor cloud costs regularly.
+*   **3.7. Choose the Right Providers:** Carefully evaluate cloud providers, considering their security features, service level agreements (SLAs), and pricing models.
+*   **3.8. Monitor and Evaluate Continuously:** Regularly assess cloud performance, security, and costs, making adjustments as needed.
+*   **3.9. Build a Strong Team:** Create a dedicated team, including a project manager, technical lead, and business representatives, to manage the implementation.
+*   **3.10. Embrace Change Management:** Prepare employees for the cloud transition, communicate benefits, and provide support and training.
+
+---
+
+**4. Expected Benefits:**
+
+Implementing cloud solutions delivers significant benefits to small businesses:
+
+*   **4.1. Tangible Benefits (Measurable ROI):**
+    *   **Cost Reduction:** Reduce IT infrastructure costs, hardware expenses, energy consumption, and IT staff salaries.
+    *   **Improved Productivity:** Enhance efficiency by using cloud-based collaboration tools and applications.
+    *   **Reduced IT Downtime:** Minimize downtime through cloud infrastructure reliability and disaster recovery capabilities.
+    *   **Faster Time to Market:** Accelerate the launch of new products or services.
+*   **4.2. Intangible Benefits:**
+    *   **Increased Agility and Scalability:** Respond quickly to market changes.
+    *   **Enhanced Collaboration:** Improve communication and teamwork.
+    *   **Focus on Core Business:** Free up IT resources to focus on core business activities.
+    *   **Enhanced Data Security and Compliance:** Improve data security and compliance posture.
+
+---
+
+By following this guide, small businesses can successfully navigate the transition to the cloud, realizing significant benefits in terms of cost, agility, security, and overall competitiveness. The key lies in careful planning, a phased implementation approach, and a commitment to continuous improvement and optimization.
+
+
+================================================================================
