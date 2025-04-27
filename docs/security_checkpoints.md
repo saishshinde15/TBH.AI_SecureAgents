@@ -1,6 +1,6 @@
 # Security Checkpoints in TBH Secure Agents Framework
 
-![TBH Secure Agents Logo](./assets/logo.png)
+<img width="618" alt="Main" src="https://github.com/user-attachments/assets/dbbf5a4f-7b0b-4f43-9b37-ef77dc761ff1" />
 
 The `tbh_secure_agents` framework is designed with security as a core principle, implementing comprehensive security checkpoints throughout the expert and operation execution lifecycle. These checkpoints provide multiple layers of defense against various security threats.
 
