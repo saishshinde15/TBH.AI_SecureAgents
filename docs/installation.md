@@ -28,7 +28,7 @@ This is a closed-source package with proprietary security implementations. The i
 
 This package is distributed as a closed-source solution to protect the proprietary security mechanisms and intellectual property. The source code is not publicly available for direct installation or modification.
 
-If you're interested in contributing to the project or need access to the source code for specific use cases, please contact the maintainers at saish.shinde15@gmail.com for more information about partnership opportunities.
+If you're interested in contributing to the project or need access to the source code for specific use cases, please contact the maintainers at saish.shinde.jb@gmail.com for more information about partnership opportunities.
 
 ## Verifying Installation
 
