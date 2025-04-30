@@ -16,7 +16,7 @@ from tbh_secure_agents import Expert, Operation, Squad
 
 # Set your Google API key
 # You can also set this as an environment variable before running the script
-os.environ["GOOGLE_API_KEY"] = "AIzaSyAwkWbBba6t9O15Ok0bsxFmBRoFfhokmVA"
+os.environ["GOOGLE_API_KEY"] = ""
 
 def main():
     print("\n" + "="*80)
