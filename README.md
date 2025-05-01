@@ -19,6 +19,7 @@ Developed by Saish at TBH.AI.
     * Reliability enhancements to reduce hallucinations
 *   **Modular Expert Design:** Easily define and customize experts with specific specialties and security profiles.
 *   **Flexible Operation Management:** Define complex workflows and operations with clear input/output specifications.
+*   **Dynamic Guardrails:** Pass runtime inputs to guide expert behavior and enforce constraints during deployment.
 *   **Secure Communication:** Mechanisms for secure inter-expert communication with context validation.
 *   **Comprehensive Security Documentation:** Detailed guides on security profiles, checkpoints, and implementation details.
 
@@ -40,7 +41,17 @@ Full documentation, including installation instructions, usage guides, and detai
 
 *   **[Installation Guide](./docs/installation.md)**
 *   **[Usage Guide](./docs/usage_guide.md)**
-*   **[Security Focus](./docs/security_focus.md)**
+*   **[Security Features](./docs/security_features_comprehensive.md)**
+*   **[Guardrails Guide](./docs/guardrails_comprehensive.md)**
+*   **[Version Changes](./docs/version_changes.md)**
+
+## Examples
+
+The `examples/` directory contains various examples demonstrating the framework's capabilities:
+
+*   **[Guardrails Examples](./examples/guardrails/)**: A collection of examples showing how to use guardrails with varying complexity levels (easy, medium, hard)
+*   **[Security Testing](./examples/security_testing/)**: Examples of security testing and validation
+*   **[Main Example](./examples/main_example/)**: A comprehensive example showing the core functionality
 
 ## Getting Started (Quick Example)
 
@@ -84,8 +95,16 @@ security_squad = Squad(
     process='sequential'  # Operations run in sequence, passing results as context
 )
 
-# Deploy the squad
-result = security_squad.deploy()
+# Define guardrail inputs (dynamic constraints and parameters)
+guardrails = {
+    "scope": "network infrastructure only",
+    "compliance_framework": "NIST",
+    "max_findings": 5,
+    "priority_level": "critical"
+}
+
+# Deploy the squad with guardrails
+result = security_squad.deploy(guardrails=guardrails)
 
 print(result)  # Securely handled output
 ```
@@ -96,7 +115,7 @@ Contributions are welcome! Please see the `CONTRIBUTING.md` file (to be created)
 
 ## License
 
-This project is licensed under the MIT License - see the `LICENSE` file for details.
+This project is licensed under the Apache License 2.0 - see the `LICENSE` file for details.
 
 ## Contact
 

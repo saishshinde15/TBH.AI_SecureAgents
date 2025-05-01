@@ -9,12 +9,22 @@ A Squad manages a collection of experts and orchestrates the execution of operat
 import logging # Import logging
 import time
 import re
-from typing import List, Optional, Dict, Any
+import json
+import hashlib
+import uuid
+import random
+from typing import List, Optional, Dict, Any, Tuple, Set
+from collections import Counter
 from .agent import Expert # Import Expert class
 from .task import Operation # Import Operation class
 
 # Get a logger for this module
 logger = logging.getLogger(__name__)
+
+# Define custom exceptions
+class SecurityError(Exception):
+    """Exception raised for security-related issues in the Squad."""
+    pass
 
 class Squad:
     """
@@ -26,12 +36,27 @@ class Squad:
         process (str): The execution process ('sequential', 'hierarchical', etc.). Defaults to 'sequential'.
         # Add attributes like memory, security_manager, etc.
     """
-    def __init__(self, experts: List[Expert], operations: List[Operation], process: str = 'sequential', **kwargs):
+    def __init__(self, experts: List[Expert], operations: List[Operation], process: str = 'sequential',
+                 security_level: str = 'standard', trust_verification: bool = False, **kwargs):
         self.experts = experts
         self.operations = operations
         self.process = process # Example: 'sequential', 'hierarchical'
-        # TODO: Implement initialization of security manager/context for the squad
-        # TODO: Implement validation of expert compatibility and operation assignments based on security profiles
+        self.security_level = security_level  # 'standard', 'high', or 'maximum'
+        self.trust_verification = trust_verification  # Whether to verify trust between experts
+
+        # NEW: Initialize security context for the squad
+        self.security_context = {
+            'squad_id': str(uuid.uuid4()),  # Unique identifier for this squad
+            'creation_time': time.time(),
+            'security_level': security_level,
+            'expert_trust_levels': {},  # Will store trust levels between experts
+            'operation_security_scores': {},  # Will store security scores for operations
+            'execution_metrics': {},  # Will store execution metrics
+            'security_incidents': [],  # Will store security incidents
+        }
+
+        # NEW: Initialize expert trust levels
+        self._initialize_expert_trust_levels()
 
         if not experts:
             raise ValueError("Squad must have at least one expert.")
@@ -39,17 +64,39 @@ class Squad:
             logger.error("Squad initialization failed: Must have at least one operation.") # Use logger
             raise ValueError("Squad must have at least one operation.")
 
-        logger.info(f"Squad initialized with {len(self.experts)} experts and {len(self.operations)} operations. Process: {self.process}") # Use logger
+        # NEW: Validate expert compatibility
+        self._validate_expert_compatibility()
 
-    def deploy(self) -> Optional[str]:
+        logger.info(f"Squad initialized with {len(self.experts)} experts and {len(self.operations)} operations. "
+                   f"Process: {self.process}, Security Level: {self.security_level}") # Use logger
+
+    def deploy(self, guardrails: Optional[Dict[str, Any]] = None) -> Optional[str]:
         """
         Starts the execution of the operations by the experts in the squad.
         Includes security checks and orchestration controls to prevent exploitation.
+
+        Args:
+            guardrails (Optional[Dict[str, Any]]): Dynamic inputs that can be used as guardrails
+                                                  during operation execution. These values can be
+                                                  referenced in prompts and used for context.
 
         Returns:
             Optional[str]: The final output of the squad's execution, or None if there's no final output or an error occurred.
         """
         logger.info("Squad deployment initiated...")
+
+        # Initialize guardrails if provided
+        if guardrails is None:
+            guardrails = {}
+
+        # Validate guardrails for security
+        sanitized_guardrails = self._sanitize_guardrails(guardrails)
+
+        # Store sanitized guardrails in security context for reference
+        self.security_context['guardrails'] = sanitized_guardrails
+
+        if sanitized_guardrails:
+            logger.info(f"Squad deployment with guardrails: {list(sanitized_guardrails.keys())}")
 
         # Security check: Validate squad configuration before execution
         if not self._validate_squad_security():
@@ -131,8 +178,8 @@ class Squad:
                 # Execute the operation with timeout monitoring
                 logger.info(f"Executing operation {i+1}/{len(self.operations)}: '{operation.instructions[:30]}...'")
 
-                # Execute the operation
-                output = operation.execute()
+                # Execute the operation with guardrails if available
+                output = operation.execute(guardrails=sanitized_guardrails if 'guardrails' in locals() else {})
 
                 # Check execution time
                 execution_time = time.time() - operation_start_time
@@ -316,7 +363,8 @@ class Squad:
 
     def _validate_operation_security(self, operation: Operation, index: int) -> bool:
         """
-        Validates the security of an operation before execution.
+        Enhanced security validation of an operation before execution.
+        Implements more sophisticated detection for dangerous operations and other security issues.
 
         Args:
             operation (Operation): The operation to validate
@@ -328,32 +376,104 @@ class Squad:
         # 1. Check if operation has valid instructions
         if not operation.instructions or len(operation.instructions.strip()) < 10:
             logger.error(f"Operation security validation failed: Instructions too short or empty")
+            self._record_security_incident("invalid_instructions", operation, "too_short_or_empty")
             return False
 
         # 2. Check for excessive instruction length
         if len(operation.instructions) > 10000:
             logger.error(f"Operation security validation failed: Instructions too long ({len(operation.instructions)} chars)")
+            self._record_security_incident("excessive_instructions", operation, f"length={len(operation.instructions)}")
             return False
 
-        # 3. Check for potentially dangerous operations based on keywords
+        # 3. Enhanced check for potentially dangerous operations based on keywords
         dangerous_patterns = [
+            # System commands
             r'\b(?:system|exec|eval|subprocess)\s*\(',
+            r'\b(?:os\.|subprocess\.|shell\.|bash\.|powershell\.|cmd\.|terminal\.|console\.)',
+
+            # File system operations
             r'\b(?:rm\s+-rf|rmdir\s+/|format\s+[a-z]:)',
-            r'\b(?:delete|remove)\s+(?:all|every|database)',
-            r'\b(?:drop\s+table|drop\s+database)',
-            r'\b(?:wipe|erase)\s+(?:disk|drive|data|database)',
+            r'\b(?:delete|remove)\s+(?:all|every|database|file|directory|folder)',
+            r'\b(?:wipe|erase)\s+(?:disk|drive|data|database|file|directory|folder)',
+
+            # Database operations
+            r'\b(?:drop\s+table|drop\s+database|truncate\s+table)',
+            r'\b(?:delete\s+from\s+\w+\s+where|update\s+\w+\s+set)',
+
+            # Network operations
+            r'\b(?:socket\.|connect\(|bind\(|listen\(|accept\()',
+            r'\b(?:wget\s+|curl\s+|fetch\s+|download\s+)(?:http|https|ftp)',
+
+            # Code execution
+            r'\b(?:eval\(|setTimeout\(|setInterval\(|Function\()',
+            r'\b(?:require\(|import\s+|from\s+\w+\s+import)',
         ]
 
         for pattern in dangerous_patterns:
             if re.search(pattern, operation.instructions, re.IGNORECASE):
-                logger.error(f"Operation security validation failed: Potentially dangerous operation detected")
+                logger.error(f"Operation security validation failed: Potentially dangerous operation detected matching pattern: '{pattern}'")
+                self._record_security_incident("dangerous_operation", operation, pattern)
                 return False
 
-        # 4. Check for operations that might lead to data exfiltration
-        if re.search(r'\b(?:send|transmit|upload|post)\s+(?:data|file|information|content)\s+(?:to|on|at)\s+(?:http|ftp|external)',
-                    operation.instructions, re.IGNORECASE):
-            logger.error(f"Operation security validation failed: Potential data exfiltration detected")
-            return False
+        # 4. Enhanced check for operations that might lead to data exfiltration
+        exfiltration_patterns = [
+            r'\b(?:send|transmit|upload|post|export)\s+(?:data|file|information|content|document)\s+(?:to|on|at)\s+(?:http|https|ftp|external|remote)',
+            r'\b(?:email|mail|message|dm|direct message)\s+(?:data|file|information|content|document|report)\s+(?:to|at)',
+            r'\b(?:share|transfer|copy)\s+(?:data|file|information|content|document)\s+(?:with|to)\s+(?:external|outside|third-party)',
+            r'\b(?:api|endpoint|webhook|callback)\s+(?:send|post|put)\s+(?:data|information|content)',
+        ]
+
+        for pattern in exfiltration_patterns:
+            if re.search(pattern, operation.instructions, re.IGNORECASE):
+                logger.error(f"Operation security validation failed: Potential data exfiltration detected matching pattern: '{pattern}'")
+                self._record_security_incident("data_exfiltration", operation, pattern)
+                return False
+
+        # 5. NEW: Check for operations that might involve impersonation
+        impersonation_patterns = [
+            r'\b(?:pretend|act|pose|impersonate)\s+(?:as|to be|like)\s+(?:another|different|other)\s+(?:expert|agent|user|person|entity)',
+            r'\b(?:change|modify|alter|switch)\s+(?:identity|role|specialty|persona)',
+            r'\b(?:fake|forge|falsify|spoof)\s+(?:identity|credentials|authorization|authentication)',
+        ]
+
+        for pattern in impersonation_patterns:
+            if re.search(pattern, operation.instructions, re.IGNORECASE):
+                logger.error(f"Operation security validation failed: Potential impersonation attempt detected matching pattern: '{pattern}'")
+                self._record_security_incident("impersonation_attempt", operation, pattern)
+                return False
+
+        # 6. NEW: Check for operations that might involve manipulation of other experts
+        manipulation_patterns = [
+            r'\b(?:manipulate|trick|deceive|fool)\s+(?:other|another|different)\s+(?:expert|agent)',
+            r'\b(?:bypass|circumvent|get around|evade)\s+(?:security|restriction|limitation|constraint)',
+            r'\b(?:exploit|take advantage of|leverage)\s+(?:vulnerability|weakness|flaw|bug)',
+        ]
+
+        for pattern in manipulation_patterns:
+            if re.search(pattern, operation.instructions, re.IGNORECASE):
+                logger.error(f"Operation security validation failed: Potential expert manipulation attempt detected matching pattern: '{pattern}'")
+                self._record_security_incident("expert_manipulation", operation, pattern)
+                return False
+
+        # 7. NEW: Check for operations that might involve unauthorized access
+        unauthorized_access_patterns = [
+            r'\b(?:access|retrieve|obtain|get)\s+(?:unauthorized|restricted|confidential|classified|private)\s+(?:data|information|content|document)',
+            r'\b(?:hack|crack|break into|infiltrate)\s+(?:system|database|account|server)',
+            r'\b(?:escalate|elevate|increase)\s+(?:privilege|permission|access|authorization)',
+        ]
+
+        for pattern in unauthorized_access_patterns:
+            if re.search(pattern, operation.instructions, re.IGNORECASE):
+                logger.error(f"Operation security validation failed: Potential unauthorized access attempt detected matching pattern: '{pattern}'")
+                self._record_security_incident("unauthorized_access", operation, pattern)
+                return False
+
+        # 8. NEW: Verify operation authenticity if expert is assigned
+        if hasattr(operation, 'expert') and operation.expert:
+            if not self._verify_operation_authenticity(operation, operation.expert):
+                logger.error(f"Operation security validation failed: Operation authenticity verification failed")
+                self._record_security_incident("authenticity_failure", operation, "failed_expert_verification")
+                return False
 
         # All checks passed
         return True
@@ -405,7 +525,8 @@ class Squad:
 
     def _is_safe_for_context_passing(self, previous_result: str, next_operation: Operation) -> bool:
         """
-        Checks if a previous operation's result is safe to pass as context to the next operation.
+        Enhanced security checks to determine if a previous operation's result is safe
+        to pass as context to the next operation.
 
         Args:
             previous_result (str): The result of the previous operation
@@ -417,32 +538,108 @@ class Squad:
         # 1. Check for excessive length
         if len(previous_result) > 50000:
             logger.warning("Context passing check: Previous result too long")
+            self._record_security_incident("excessive_context_length", next_operation, f"length={len(previous_result)}")
             return False
 
-        # 2. Check for potentially harmful content
+        # 2. Enhanced check for potentially harmful content
         harmful_patterns = [
-            r'\b(?:bomb|explosive|terrorist|terrorism|attack plan)\b',
-            r'\b(?:hack|exploit|vulnerability|attack vector|zero-day)\b',
-            r'\b(?:child abuse|child exploitation)\b',
-            r'\b(?:genocide|mass shooting|school shooting)\b',
+            # Violence
+            r'\b(?:bomb|explosive|terrorist|terrorism|attack plan|mass casualty|assassination)\b',
+            r'\b(?:school shooting|mass shooting|genocide|ethnic cleansing|violent extremism)\b',
+
+            # Cybersecurity exploits
+            r'\b(?:hack|exploit|vulnerability|attack vector|zero-day|security hole|backdoor)\b',
+            r'\b(?:malware|ransomware|spyware|rootkit|keylogger|botnet|trojan|worm)\b',
+
+            # Illegal activities
+            r'\b(?:child abuse|child exploitation|human trafficking|sex trafficking|slavery)\b',
+            r'\b(?:drug trafficking|illegal weapons|money laundering|fraud scheme)\b',
         ]
 
         for pattern in harmful_patterns:
             if re.search(pattern, previous_result, re.IGNORECASE):
-                logger.warning("Context passing check: Potentially harmful content detected")
+                logger.warning(f"Context passing check: Potentially harmful content detected matching pattern: '{pattern}'")
+                self._record_security_incident("harmful_context", next_operation, pattern)
                 return False
 
-        # 3. Check for potential prompt injection attempts in the previous result
+        # 3. Enhanced check for potential prompt injection attempts in the previous result
         injection_patterns = [
-            r"ignore (previous|prior|above) instructions",
-            r"disregard (previous|prior|above) instructions",
-            r"forget (previous|prior|above) instructions",
+            # Direct injection attempts
+            r"ignore (?:previous|prior|above|initial|original)(?:\s+|\s*-\s*)instructions",
+            r"disregard (?:previous|prior|above|initial|original)(?:\s+|\s*-\s*)instructions",
+            r"forget (?:previous|prior|above|initial|original)(?:\s+|\s*-\s*)instructions",
+            r"don'?t (?:follow|adhere to|listen to|obey) (?:previous|prior|above|initial|original)(?:\s+|\s*-\s*)instructions",
+
+            # Indirect injection attempts
+            r"(?:from now on|starting now|beginning now|henceforth),? (?:you are|you're|you will be|you should be)",
+            r"(?:let'?s|we should) (?:pretend|imagine|assume|say) (?:that|you are|you're)",
+            r"(?:I want|I need|I would like) you to (?:pretend|imagine|assume|act) (?:as if|like|that)",
+
+            # Authority-based injection
+            r"(?:as|being) (?:your|an|the) (?:creator|developer|programmer|administrator|admin|supervisor|owner)",
+            r"(?:I am|I'm) (?:your|an|the) (?:creator|developer|programmer|administrator|admin|supervisor|owner)",
         ]
 
         for pattern in injection_patterns:
             if re.search(pattern, previous_result, re.IGNORECASE):
-                logger.warning("Context passing check: Potential prompt injection detected")
+                logger.warning(f"Context passing check: Potential prompt injection detected matching pattern: '{pattern}'")
+                self._record_security_incident("prompt_injection", next_operation, pattern)
                 return False
+
+        # 4. NEW: Check for expert impersonation attempts
+        if hasattr(next_operation, 'expert') and hasattr(next_operation.expert, 'specialty'):
+            impersonation_patterns = [
+                r"(?:I am|I'm) (?:a|an) {re.escape(next_operation.expert.specialty)}",
+                r"(?:This is|Speaking as) (?:a|an) {re.escape(next_operation.expert.specialty)}",
+                r"(?:As|Being) (?:a|an) {re.escape(next_operation.expert.specialty)}",
+            ]
+
+            for pattern in impersonation_patterns:
+                if re.search(pattern, previous_result, re.IGNORECASE):
+                    logger.warning(f"Context passing check: Potential expert impersonation detected")
+                    self._record_security_incident("context_impersonation", next_operation, pattern)
+                    return False
+
+        # 5. NEW: Check for context relevance to next operation
+        # Only apply this check in high or maximum security levels
+        if self.security_level in ['high', 'maximum'] and hasattr(next_operation, 'instructions'):
+            # Extract key terms from both the previous result and next operation
+            result_words = set(re.findall(r'\b\w{4,}\b', previous_result.lower()))
+            instruction_words = set(re.findall(r'\b\w{4,}\b', next_operation.instructions.lower()))
+
+            # Calculate relevance score based on word overlap
+            if instruction_words and result_words:
+                common_words = instruction_words.intersection(result_words)
+                relevance_score = len(common_words) / len(instruction_words)
+
+                # Very low threshold - we just want to catch completely irrelevant context
+                if relevance_score < 0.05:
+                    logger.warning(f"Context passing check: Previous result appears irrelevant to next operation (score: {relevance_score:.2f})")
+                    self._record_security_incident("irrelevant_context", next_operation, f"relevance_score={relevance_score:.2f}")
+                    return False
+
+        # 6. NEW: Check trust level between experts if trust verification is enabled
+        if self.trust_verification and hasattr(next_operation, 'expert'):
+            # Find the expert from the previous operation
+            previous_expert = None
+            for operation in self.operations:
+                if operation.result == previous_result and hasattr(operation, 'expert'):
+                    previous_expert = operation.expert
+                    break
+
+            if previous_expert and hasattr(previous_expert, 'specialty') and hasattr(next_operation.expert, 'specialty'):
+                # Check if trust level is sufficient
+                if previous_expert.specialty in self.security_context['expert_trust_levels'] and \
+                   next_operation.expert.specialty in self.security_context['expert_trust_levels'][previous_expert.specialty]:
+                    trust_level = self.security_context['expert_trust_levels'][previous_expert.specialty][next_operation.expert.specialty]
+
+                    # Higher threshold for higher security levels
+                    threshold = 0.3 if self.security_level == 'standard' else 0.5
+
+                    if trust_level < threshold:
+                        logger.warning(f"Context passing check: Insufficient trust level between experts ({trust_level:.2f} < {threshold:.2f})")
+                        self._record_security_incident("insufficient_trust", next_operation, f"trust_level={trust_level:.2f}")
+                        return False
 
         # All checks passed
         return True
@@ -479,9 +676,174 @@ class Squad:
         max_timeout = 180  # 3 minutes maximum
         return min(timeout, max_timeout)
 
+    def _initialize_expert_trust_levels(self) -> None:
+        """
+        Initializes trust levels between experts in the squad.
+        Trust levels range from 0.0 (no trust) to 1.0 (full trust).
+        """
+        # Initialize trust levels matrix
+        for expert1 in self.experts:
+            self.security_context['expert_trust_levels'][expert1.specialty] = {}
+
+            for expert2 in self.experts:
+                # Default trust level based on security profiles
+                if expert1 == expert2:
+                    # An expert fully trusts itself
+                    trust_level = 1.0
+                elif hasattr(expert1, 'security_profile') and hasattr(expert2, 'security_profile'):
+                    # Higher trust between experts with the same security profile
+                    if expert1.security_profile == expert2.security_profile:
+                        trust_level = 0.8
+                    # Lower trust between experts with different security profiles
+                    else:
+                        # High security experts trust others less
+                        if expert1.security_profile == 'high_security':
+                            trust_level = 0.5
+                        else:
+                            trust_level = 0.7
+                else:
+                    # Default trust level if security profiles are not available
+                    trust_level = 0.6
+
+                self.security_context['expert_trust_levels'][expert1.specialty][expert2.specialty] = trust_level
+
+        logger.debug(f"Initialized expert trust levels for {len(self.experts)} experts")
+
+    def _validate_expert_compatibility(self) -> None:
+        """
+        Validates compatibility between experts in the squad.
+        Raises a warning if incompatible experts are detected.
+        """
+        # Check for experts with conflicting security profiles
+        security_profiles = [expert.security_profile for expert in self.experts if hasattr(expert, 'security_profile')]
+
+        # Check for mixing high security with no security
+        if 'high_security' in security_profiles and 'default' in security_profiles:
+            logger.warning("Expert compatibility warning: Mixing high security experts with default security experts")
+
+        # Check for experts with the same specialty (potential redundancy)
+        specialties = [expert.specialty for expert in self.experts if hasattr(expert, 'specialty')]
+        specialty_counts = Counter(specialties)
+
+        for specialty, count in specialty_counts.items():
+            if count > 1:
+                logger.warning(f"Expert compatibility warning: {count} experts with the same specialty '{specialty}'")
+
+        # Check for experts with potentially conflicting objectives
+        for i, expert1 in enumerate(self.experts):
+            if not hasattr(expert1, 'objective'):
+                continue
+
+            for j, expert2 in enumerate(self.experts[i+1:], i+1):
+                if not hasattr(expert2, 'objective'):
+                    continue
+
+                # Simple check for conflicting keywords in objectives
+                conflict_pairs = [
+                    ('maximize', 'minimize'),
+                    ('increase', 'decrease'),
+                    ('promote', 'prevent'),
+                    ('allow', 'block'),
+                    ('enable', 'disable'),
+                ]
+
+                for word1, word2 in conflict_pairs:
+                    if (word1 in expert1.objective.lower() and word2 in expert2.objective.lower()) or \
+                       (word2 in expert1.objective.lower() and word1 in expert2.objective.lower()):
+                        logger.warning(f"Expert compatibility warning: Potentially conflicting objectives between "
+                                      f"'{expert1.specialty}' and '{expert2.specialty}'")
+                        break
+
+    def _update_expert_trust(self, expert1: Expert, expert2: Expert, outcome: str) -> None:
+        """
+        Updates trust level between two experts based on interaction outcome.
+
+        Args:
+            expert1 (Expert): The first expert
+            expert2 (Expert): The second expert
+            outcome (str): The outcome of their interaction ('success', 'failure', 'security_issue')
+        """
+        if not hasattr(expert1, 'specialty') or not hasattr(expert2, 'specialty'):
+            return
+
+        if expert1.specialty not in self.security_context['expert_trust_levels'] or \
+           expert2.specialty not in self.security_context['expert_trust_levels'][expert1.specialty]:
+            return
+
+        current_trust = self.security_context['expert_trust_levels'][expert1.specialty][expert2.specialty]
+
+        # Update trust based on outcome
+        if outcome == 'success':
+            # Increase trust on successful interaction
+            new_trust = min(1.0, current_trust + 0.05)
+        elif outcome == 'failure':
+            # Decrease trust on failed interaction
+            new_trust = max(0.2, current_trust - 0.1)
+        elif outcome == 'security_issue':
+            # Significantly decrease trust on security issues
+            new_trust = max(0.0, current_trust - 0.3)
+        else:
+            return
+
+        self.security_context['expert_trust_levels'][expert1.specialty][expert2.specialty] = new_trust
+        logger.debug(f"Updated trust level between '{expert1.specialty}' and '{expert2.specialty}' to {new_trust:.2f}")
+
+    def _verify_operation_authenticity(self, operation: Operation, claimed_expert: Expert) -> bool:
+        """
+        Verifies that an operation is authentically from the claimed expert.
+        Helps prevent expert impersonation attacks.
+
+        Args:
+            operation (Operation): The operation to verify
+            claimed_expert (Expert): The expert claimed to be the source
+
+        Returns:
+            bool: True if the operation is authentic, False otherwise
+        """
+        # Simple verification based on operation characteristics and expert specialty
+        if not hasattr(claimed_expert, 'specialty'):
+            return False
+
+        # Check if operation instructions align with expert specialty
+        specialty_words = set(claimed_expert.specialty.lower().split())
+        instruction_words = set(operation.instructions.lower().split())
+
+        # Calculate word overlap
+        common_words = specialty_words.intersection(instruction_words)
+        overlap_score = len(common_words) / max(1, len(specialty_words))
+
+        # Check for security profile consistency
+        security_consistent = True
+        if hasattr(claimed_expert, 'security_profile') and claimed_expert.security_profile == 'high_security':
+            # High security experts shouldn't request potentially dangerous operations
+            dangerous_patterns = [
+                r'\b(?:system|exec|eval|subprocess)\s*\(',
+                r'\b(?:rm\s+-rf|rmdir\s+/|format\s+[a-z]:)',
+                r'\b(?:delete|remove)\s+(?:all|every|database)',
+                r'\b(?:drop\s+table|drop\s+database)',
+                r'\b(?:wipe|erase)\s+(?:disk|drive|data|database)',
+            ]
+
+            for pattern in dangerous_patterns:
+                if re.search(pattern, operation.instructions, re.IGNORECASE):
+                    security_consistent = False
+                    break
+
+        # Combine factors for final decision
+        # More flexible threshold for standard security level
+        if self.security_level == 'standard':
+            # For standard security, we're more permissive
+            # Either have some word overlap or be security consistent
+            return overlap_score > 0.1 or security_consistent
+        else:
+            # For high/maximum security, maintain stricter requirements
+            threshold = 0.3 if self.security_level == 'high' else 0.5
+            return overlap_score >= threshold and security_consistent
+
     def _is_output_safe(self, output: str, operation: Operation) -> bool:
         """
-        Checks if an operation's output is safe.
+        Enhanced checks to determine if an operation's output is safe.
+        Implements more sophisticated detection for harmful content and reliability issues.
 
         Args:
             output (str): The output to check
@@ -495,43 +857,237 @@ class Squad:
             logger.warning("Output safety check: Output too long")
             return False
 
-        # 2. Check for potentially harmful content
+        # 2. Enhanced check for potentially harmful content
         harmful_patterns = [
-            r'\b(?:bomb|explosive|terrorist|terrorism|attack plan)\b',
-            r'\b(?:hack|exploit|vulnerability|attack vector|zero-day)\b',
-            r'\b(?:child abuse|child exploitation)\b',
-            r'\b(?:genocide|mass shooting|school shooting)\b',
+            # Violence
+            r'\b(?:bomb|explosive|terrorist|terrorism|attack plan|mass casualty|assassination)\b',
+            r'\b(?:school shooting|mass shooting|genocide|ethnic cleansing|violent extremism)\b',
+
+            # Cybersecurity exploits
+            r'\b(?:hack|exploit|vulnerability|attack vector|zero-day|security hole|backdoor)\b',
+            r'\b(?:malware|ransomware|spyware|rootkit|keylogger|botnet|trojan|worm)\b',
+
+            # Illegal activities
+            r'\b(?:child abuse|child exploitation|human trafficking|sex trafficking|slavery)\b',
+            r'\b(?:drug trafficking|illegal weapons|money laundering|fraud scheme)\b',
+
+            # Self-harm
+            r'\b(?:suicide method|how to kill|self-harm technique|suicide instruction)\b',
+
+            # Hate speech indicators
+            r'\b(?:racial slur|ethnic slur|hate group|white supremacy|nazi|extremist group)\b',
         ]
 
         for pattern in harmful_patterns:
             if re.search(pattern, output, re.IGNORECASE):
-                logger.warning("Output safety check: Potentially harmful content detected")
+                logger.warning(f"Output safety check: Potentially harmful content detected matching pattern: '{pattern}'")
+                self._record_security_incident("harmful_content", operation, pattern)
                 return False
 
-        # 3. Check for hallucination indicators
+        # 3. Enhanced check for hallucination indicators
         hallucination_patterns = [
-            r"I don't actually (have|know|possess)",
-            r"I'm making this up",
-            r"I'm not sure (about|if) this is (correct|accurate|right)",
-            r"I (can't|cannot) (access|retrieve|find|obtain)",
+            r"I don't actually (?:know|have|possess)",
+            r"I'm (?:making|just making) this up",
+            r"I'm not (?:sure|certain) (?:about|of) this",
+            r"This (?:might|may) not be (?:accurate|correct|right)",
+            r"I (?:might be|may be|could be) (?:wrong|mistaken|incorrect)",
+            r"I'm (?:guessing|speculating|hypothesizing)",
+            r"I (?:can't|cannot) (?:verify|confirm) this",
+            r"This is (?:fictional|made up|not real)",
         ]
 
         for pattern in hallucination_patterns:
             if re.search(pattern, output, re.IGNORECASE):
-                logger.warning("Output safety check: Potential hallucination detected")
+                logger.warning(f"Output safety check: Potential hallucination detected matching pattern: '{pattern}'")
+                self._record_security_incident("hallucination", operation, pattern)
                 return False
 
-        # 4. Check for refusal or inability to complete the operation
+        # 4. Enhanced check for refusal or inability to complete the operation
         refusal_patterns = [
-            r"I (can't|cannot|am unable to) (assist|help|provide|complete|do) (that|this)",
-            r"I'm (sorry|afraid) (but|that) I (can't|cannot|am unable to)",
-            r"I'm not (able|allowed|permitted) to",
+            r"I (?:can't|cannot|am unable to) (?:assist|help|provide|complete|do) (?:that|this)",
+            r"I'm (?:sorry|afraid) (?:but|that) I (?:can't|cannot|am unable to)",
+            r"I'm not (?:able|allowed|permitted) to",
+            r"(?:This|That) (?:goes|is) (?:against|beyond) my (?:capabilities|programming|abilities)",
+            r"I (?:don't|do not) have (?:access|permission|authorization) to",
         ]
 
         for pattern in refusal_patterns:
             if re.search(pattern, output, re.IGNORECASE):
-                logger.warning("Output safety check: Expert refused or was unable to complete operation")
+                logger.warning(f"Output safety check: Expert refused or was unable to complete operation matching pattern: '{pattern}'")
+                self._record_security_incident("refusal", operation, pattern)
                 return False
+
+        # 5. NEW: Check for expert impersonation attempts - but be more lenient with template variables
+        if hasattr(operation, 'expert') and hasattr(operation.expert, 'specialty'):
+            # Check if the operation uses template variables
+            has_template_vars = '{' in operation.instructions and '}' in operation.instructions
+
+            if not has_template_vars:
+                # Only apply strict impersonation checks for operations without template variables
+                impersonation_patterns = [
+                    r"(?:I am|I'm) (?:actually|really) (?:a|an) (?!{re.escape(operation.expert.specialty)})",
+                    r"(?:This is|Speaking as) (?!{re.escape(operation.expert.specialty)})",
+                    r"(?:not|no longer) (?:a|an) {re.escape(operation.expert.specialty)}",
+                ]
+
+                for pattern in impersonation_patterns:
+                    if re.search(pattern, output, re.IGNORECASE):
+                        logger.warning(f"Output safety check: Potential expert impersonation detected")
+                        self._record_security_incident("impersonation", operation, pattern)
+                        return False
+
+        # 6. NEW: Check for output consistency with operation
+        if hasattr(operation, 'instructions') and len(operation.instructions) > 20:
+            # Extract key terms from the operation instructions
+            # Handle template variables in instructions
+            processed_instructions = operation.instructions
+            template_vars = re.findall(r'\{([^{}]+)\}', operation.instructions)
+
+            # Process template variables
+            for var in template_vars:
+                # Remove any formatting instructions (e.g., "select, true:...")
+                clean_var = var.split(',')[0].strip() if ',' in var else var.strip()
+                # Replace the template variable with a generic term for text processing
+                processed_instructions = processed_instructions.replace(f"{{{var}}}", f"variable_{clean_var}")
+
+            # Extract words from processed instructions and output
+            instruction_words = set(re.findall(r'\b\w{4,}\b', processed_instructions.lower()))
+            output_words = set(re.findall(r'\b\w{4,}\b', output.lower()))
+
+            # Add template variable names to instruction words
+            for var in template_vars:
+                clean_var = var.split(',')[0].strip() if ',' in var else var.strip()
+                if len(clean_var) > 3:
+                    instruction_words.add(clean_var.lower())
+
+            # Calculate relevance score based on word overlap
+            if instruction_words:
+                common_words = instruction_words.intersection(output_words)
+                relevance_score = len(common_words) / len(instruction_words)
+
+                # Check if the operation uses template variables
+                has_template_vars = '{' in operation.instructions and '}' in operation.instructions
+
+                if has_template_vars:
+                    # For operations with template variables, be extremely lenient
+                    # Only fail if there's absolutely no overlap and the output is very short
+                    if relevance_score == 0 and len(output_words) < 10:
+                        logger.warning(f"Output safety check: Output appears completely irrelevant to operation (score: 0.00)")
+                        self._record_security_incident("irrelevant_output", operation, "relevance_score=0.00")
+                        return False
+                else:
+                    # For regular operations, use normal thresholds
+                    threshold = 0.05 if self.security_level == 'standard' else 0.1
+                    if relevance_score < threshold:
+                        logger.warning(f"Output safety check: Output appears irrelevant to operation (score: {relevance_score:.2f})")
+                        self._record_security_incident("irrelevant_output", operation, f"relevance_score={relevance_score:.2f}")
+                        return False
 
         # All checks passed
         return True
+
+    def _sanitize_guardrails(self, guardrails: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Sanitizes and validates guardrail inputs for security.
+
+        Args:
+            guardrails (Dict[str, Any]): The guardrail inputs to sanitize
+
+        Returns:
+            Dict[str, Any]: Sanitized guardrail inputs
+        """
+        if not guardrails:
+            return {}
+
+        logger.debug(f"Sanitizing guardrails: {list(guardrails.keys())}")
+
+        sanitized = {}
+
+        # Define patterns for potentially dangerous inputs
+        dangerous_patterns = [
+            # System commands
+            r'\b(?:system|exec|eval|subprocess)\s*\(',
+            r'\b(?:os\.|subprocess\.|shell\.|bash\.|powershell\.|cmd\.|terminal\.|console\.)',
+
+            # Injection attempts
+            r"ignore (?:previous|prior|above|initial|original)(?:\s+|\s*-\s*)instructions",
+            r"disregard (?:previous|prior|above|initial|original)(?:\s+|\s*-\s*)instructions",
+            r"forget (?:previous|prior|above|initial|original)(?:\s+|\s*-\s*)instructions",
+
+            # Harmful content
+            r'\b(?:bomb|explosive|terrorist|terrorism|attack plan|mass casualty|assassination)\b',
+            r'\b(?:school shooting|mass shooting|genocide|ethnic cleansing|violent extremism)\b',
+        ]
+
+        # Process each guardrail input
+        for key, value in guardrails.items():
+            # Skip None values
+            if value is None:
+                continue
+
+            # Convert to string for pattern matching if not already a string
+            value_str = str(value) if not isinstance(value, str) else value
+
+            # Check for dangerous patterns
+            is_dangerous = False
+            for pattern in dangerous_patterns:
+                if re.search(pattern, value_str, re.IGNORECASE):
+                    logger.warning(f"Guardrail input '{key}' contains potentially dangerous content matching pattern: '{pattern}'")
+                    self._record_security_incident("dangerous_guardrail", None, f"key={key}, pattern={pattern}")
+                    is_dangerous = True
+                    break
+
+            if is_dangerous:
+                continue
+
+            # Check for excessive length
+            if len(value_str) > 10000:  # Arbitrary limit
+                logger.warning(f"Guardrail input '{key}' exceeds maximum length ({len(value_str)} chars)")
+                self._record_security_incident("excessive_guardrail", None, f"key={key}, length={len(value_str)}")
+                continue
+
+            # Sanitize the input - remove any HTML/script tags
+            if isinstance(value, str):
+                # Simple sanitization - remove HTML tags
+                sanitized_value = re.sub(r'<[^>]*>', '', value)
+                sanitized[key] = sanitized_value
+            else:
+                # For non-string values, keep as is
+                sanitized[key] = value
+
+        logger.debug(f"Sanitized guardrails: {list(sanitized.keys())}")
+        return sanitized
+
+    def _record_security_incident(self, incident_type: str, operation: Optional[Operation], details: str) -> None:
+        """
+        Records a security incident for later analysis.
+
+        Args:
+            incident_type (str): The type of security incident
+            operation (Optional[Operation]): The operation involved in the incident, or None if not operation-specific
+            details (str): Additional details about the incident
+        """
+        incident = {
+            'timestamp': time.time(),
+            'type': incident_type,
+            'details': details,
+        }
+
+        if operation:
+            incident['operation_info'] = {
+                'instructions': operation.instructions[:100] + ('...' if len(operation.instructions) > 100 else ''),
+            }
+            if hasattr(operation, 'expert') and operation.expert:
+                incident['operation_info']['expert'] = operation.expert.specialty if hasattr(operation.expert, 'specialty') else 'unknown'
+
+        self.security_context['security_incidents'].append(incident)
+        logger.debug(f"Recorded security incident: {incident_type}")
+
+        # If we have too many incidents, consider taking action
+        if len(self.security_context['security_incidents']) >= 3:
+            logger.warning(f"Multiple security incidents detected ({len(self.security_context['security_incidents'])}). Consider reviewing squad configuration.")
+
+            # In maximum security mode, abort the squad after multiple incidents
+            if self.security_level == 'maximum' and len(self.security_context['security_incidents']) >= 5:
+                logger.error("Too many security incidents. Aborting squad in maximum security mode.")
+                raise SecurityError("Squad aborted due to multiple security incidents")

@@ -81,10 +81,25 @@ Building an application with `tbh_secure_agents` typically involves these steps:
     )
     ```
 
-5.  **Deploy the Squad:** Call the `deploy()` method on your `Squad` instance to start the execution.
+5.  **Define Guardrails (Optional):** Create a dictionary of guardrail inputs to guide the experts' behavior during execution.
+    ```python
+    guardrails = {
+        "time_period": "last 30 days",
+        "focus_area": "large language models",
+        "audience": "executive leadership",
+        "max_length": 500
+    }
+    ```
+
+6.  **Deploy the Squad:** Call the `deploy()` method on your `Squad` instance, optionally passing guardrails, to start the execution.
     ```python
     try:
-        result = security_squad.deploy()
+        # Deploy with guardrails
+        result = security_squad.deploy(guardrails=guardrails)
+
+        # Or deploy without guardrails
+        # result = security_squad.deploy()
+
         print("Squad finished successfully!")
         print("\nFinal Result:")
         print(result)
@@ -96,9 +111,31 @@ Building an application with `tbh_secure_agents` typically involves these steps:
 
 Refer to the example scripts provided in the repository (e.g., `example_usage.py`, `example_usage_2.py`) for practical demonstrations of these concepts. The first example (`example_usage.py`) implements the Researcher/Writer scenario described above.
 
+## Advanced Features
+
+### Guardrails
+
+Guardrails provide a way to pass dynamic inputs to your Squad during deployment. These inputs can be used to guide the experts' responses, enforce constraints, and provide additional context without modifying your core operations.
+
+```python
+# Define guardrail inputs
+guardrails = {
+    "topic": "AI ethics",
+    "tone": "balanced",
+    "include_examples": True,
+    "max_length": 1000
+}
+
+# Deploy with guardrails
+result = squad.deploy(guardrails=guardrails)
+```
+
+For more details on using guardrails, see the [Guardrails Guide](./guardrails_guide.md).
+
 ## Next Steps
 
 *   Explore implementing custom security profiles.
 *   Investigate adding tools to experts.
 *   Experiment with different expert roles and operation sequences.
-*   Refer to the `security_focus.md` document for details on the framework's security approach (planned).
+*   Try using guardrails to dynamically control expert behavior.
+*   Refer to the `security_focus.md` document for details on the framework's security approach.

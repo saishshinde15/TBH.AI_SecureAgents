@@ -8,11 +8,20 @@ Operations represent units of work to be performed by experts.
 
 import logging # Import logging
 import re
-from typing import Optional, Any
+import json
+import time
+import hashlib
+from typing import Optional, Any, Dict, List, Tuple
+from collections import Counter
 from .agent import Expert # Now we can import Expert
 
 # Get a logger for this module
 logger = logging.getLogger(__name__)
+
+# Define custom exceptions
+class SecurityError(Exception):
+    """Exception raised for security-related issues in the Operation."""
+    pass
 
 class Operation:
     """
@@ -25,51 +34,133 @@ class Operation:
         context (Optional[str]): Additional context or data needed for the operation.
         # Add attributes like dependencies, priority, security_requirements, etc.
     """
-    def __init__(self, instructions: str, output_format: Optional[str] = None, expert: Optional[Expert] = None, context: Optional[str] = None, **kwargs):
+    def __init__(self, instructions: str, output_format: Optional[str] = None, expert: Optional[Expert] = None,
+                 context: Optional[str] = None, reliability_threshold: float = 0.7, **kwargs):
         self.instructions = instructions
         self.output_format = output_format
         self.expert = expert
         self.context = context
         self.result: Optional[str] = None # To store the outcome after execution
+        self.reliability_threshold = reliability_threshold # Threshold for reliability checks
+        self.execution_metrics = {
+            'start_time': None,
+            'end_time': None,
+            'execution_duration': None,
+            'reliability_score': None,
+            'relevance_score': None,
+            'consistency_score': None,
+            'security_checks_passed': 0,
+            'security_checks_failed': 0,
+            'execution_attempts': 0,
+        }
         # Initialize other relevant attributes
 
-    def execute(self) -> str:
+    def execute(self, guardrails: Optional[Dict[str, Any]] = None) -> str:
         """
         Executes the operation, likely by calling the assigned expert's execution method.
-        Includes security checks before and after execution.
+        Includes enhanced security checks before and after execution with reliability tracking.
+
+        Args:
+            guardrails (Optional[Dict[str, Any]]): Dynamic inputs that can be used as guardrails
+                                                  during operation execution. These values can be
+                                                  referenced in prompts and used for context.
+
+        Returns:
+            str: The result of the operation execution
         """
         if not self.expert:
             logger.error(f"Operation execution failed: No expert assigned to operation '{self.instructions[:50]}...'.") # Use logger
             raise ValueError("Operation cannot be executed without an assigned expert.")
 
-        # Placeholder call, actual logic is in _pre_execution_secure
-        logger.debug(f"Performing pre-execution check for operation '{self.instructions[:50]}...'")
-        if not self._pre_execution_secure(): # Example placeholder check
-            logger.error(f"Operation pre-execution security check failed for '{self.instructions[:50]}...'. Aborting.")
-        #     return "Error: Operation failed pre-execution security check."
+        # Initialize guardrails if not provided
+        if guardrails is None:
+            guardrails = {}
 
+        # Track execution metrics
+        self.execution_metrics['start_time'] = time.time()
+        self.execution_metrics['execution_attempts'] += 1
+
+        # Enhanced pre-execution security check
+        logger.debug(f"Performing pre-execution check for operation '{self.instructions[:50]}...'")
+        if not self._pre_execution_secure():
+            self.execution_metrics['security_checks_failed'] += 1
+            logger.error(f"Operation pre-execution security check failed for '{self.instructions[:50]}...'. Aborting.")
+            raise SecurityError(f"Operation failed pre-execution security check: '{self.instructions[:50]}...'")
+
+        self.execution_metrics['security_checks_passed'] += 1
         logger.info(f"Operation '{self.instructions[:50]}...' starting execution by expert '{self.expert.specialty}'.") # Use logger
 
-        # Assuming the expert has an 'execute_task' method that accepts instructions and context
-        try:
-            # Pass the operation instructions and any available context to the expert
-            self.result = self.expert.execute_task(
-                task_description=self.instructions,
-                context=self.context # Pass context here
-            )
-            # Placeholder call, actual logic is in _post_execution_secure
-            logger.debug(f"Performing post-execution check for operation '{self.instructions[:50]}...'")
-            if not self._post_execution_secure(self.result): # Example placeholder check
-                logger.warning(f"Operation post-execution security check failed for '{self.instructions[:50]}...'. Result may be compromised.")
-                # TODO: Decide how to handle insecure result (e.g., return error, return sanitized, log only)
+        # Execute the operation with retry capability for reliability
+        max_attempts = 2  # Maximum number of retry attempts
+        current_attempt = 0
 
-            logger.info(f"Operation '{self.instructions[:50]}...' finished execution successfully.")
-            return self.result
-        except Exception as e:
-            # Basic error logging implemented
-            logger.error(f"Error executing operation '{self.instructions[:50]}...': {e}", exc_info=True)
-            # TODO: Decide whether to raise, return an error string, or handle differently based on policy
-            raise # Re-raise for now, allows Squad to handle it
+        while current_attempt < max_attempts:
+            try:
+                # Prepare context with guardrails if available
+                enhanced_context = self._prepare_context_with_guardrails(self.context, guardrails)
+
+                # Pass the operation instructions, enhanced context, and guardrails to the expert
+                self.result = self.expert.execute_task(
+                    task_description=self.instructions,
+                    context=enhanced_context,
+                    inputs=guardrails
+                )
+
+                # Enhanced post-execution security and reliability check
+                logger.debug(f"Performing post-execution check for operation '{self.instructions[:50]}...'")
+                reliability_result = self._post_execution_secure(self.result)
+
+                if isinstance(reliability_result, dict):  # New format returning metrics
+                    is_secure = reliability_result.get('is_secure', False)
+                    # Update metrics
+                    for key, value in reliability_result.items():
+                        if key in self.execution_metrics and key != 'is_secure':
+                            self.execution_metrics[key] = value
+                else:
+                    is_secure = reliability_result  # Old boolean format for backward compatibility
+
+                if not is_secure:
+                    self.execution_metrics['security_checks_failed'] += 1
+                    logger.warning(f"Operation post-execution security check failed for '{self.instructions[:50]}...'. Result may be compromised.")
+
+                    # If this was the last attempt, handle the failure
+                    if current_attempt == max_attempts - 1:
+                        # Check if we have a reliability score to determine the cause
+                        if self.execution_metrics.get('reliability_score', 0) < self.reliability_threshold:
+                            logger.error(f"Operation reliability check failed with score {self.execution_metrics.get('reliability_score', 0)}")
+                            self.result = f"Error: Expert '{self.expert.specialty}' generated an unreliable response. Please try again with clearer instructions."
+                        else:
+                            self.result = f"Error: Expert '{self.expert.specialty}' generated a response that failed security checks."
+                    else:
+                        # Try again with a more explicit instruction
+                        current_attempt += 1
+                        logger.info(f"Retrying operation (attempt {current_attempt+1}/{max_attempts})...")
+                        continue
+                else:
+                    self.execution_metrics['security_checks_passed'] += 1
+
+                # Record end time and duration
+                self.execution_metrics['end_time'] = time.time()
+                self.execution_metrics['execution_duration'] = self.execution_metrics['end_time'] - self.execution_metrics['start_time']
+
+                logger.info(f"Operation '{self.instructions[:50]}...' finished execution successfully in {self.execution_metrics['execution_duration']:.2f} seconds.")
+
+                # Generate operation fingerprint for verification
+                self._generate_operation_fingerprint()
+
+                return self.result
+
+            except Exception as e:
+                # Record the failure
+                current_attempt += 1
+                logger.error(f"Error executing operation '{self.instructions[:50]}...' (attempt {current_attempt}/{max_attempts}): {e}", exc_info=True)
+
+                # If this was the last attempt, re-raise the exception
+                if current_attempt == max_attempts:
+                    # Record end time and duration even for failed operations
+                    self.execution_metrics['end_time'] = time.time()
+                    self.execution_metrics['execution_duration'] = self.execution_metrics['end_time'] - self.execution_metrics['start_time']
+                    raise  # Re-raise for now, allows Squad to handle it
 
     # --- Placeholder Security Methods ---
 
@@ -172,104 +263,283 @@ class Operation:
         logger.debug(f"Operation pre-execution security check PASSED for '{self.instructions[:50]}...'")
         return True
 
-    def _post_execution_secure(self, result: Optional[str]) -> bool:
+    def _generate_operation_fingerprint(self) -> str:
         """
-        Performs security checks on operation results after execution.
+        Generates a unique fingerprint for the operation execution for verification purposes.
+        This helps detect tampering with operation results.
+
+        Returns:
+            str: A unique fingerprint for the operation execution
+        """
+        if not self.result:
+            return ""
+
+        # Create a fingerprint based on operation details and result
+        fingerprint_data = {
+            'instructions': self.instructions,
+            'expert': self.expert.specialty if hasattr(self.expert, 'specialty') else str(self.expert),
+            'result_hash': hashlib.sha256(self.result.encode()).hexdigest(),
+            'timestamp': time.time()
+        }
+
+        # Generate the fingerprint
+        fingerprint_str = json.dumps(fingerprint_data, sort_keys=True)
+        fingerprint = hashlib.sha256(fingerprint_str.encode()).hexdigest()
+
+        # Store the fingerprint with the operation
+        self.execution_metrics['fingerprint'] = fingerprint
+
+        logger.debug(f"Generated operation fingerprint: {fingerprint[:8]}...")
+        return fingerprint
+
+    def _post_execution_secure(self, result: Optional[str]) -> Dict:
+        """
+        Enhanced security and reliability checks on operation results after execution.
         Validates the output for reliability, consistency, and security concerns.
 
         Args:
             result (Optional[str]): The result of the operation execution
 
         Returns:
-            bool: True if the result passes all security checks, False otherwise
+            Dict: A dictionary containing security check results and reliability metrics
         """
-        logger.debug(f"Performing operation post-execution check for '{self.instructions[:50]}...'")
+        logger.debug(f"Performing enhanced operation post-execution check for '{self.instructions[:50]}...'")
+
+        # Initialize metrics
+        metrics = {
+            'is_secure': True,
+            'reliability_score': 1.0,
+            'relevance_score': 1.0,
+            'consistency_score': 1.0,
+            'security_issues': []
+        }
 
         # 1. Check if result exists
         if not result:
             logger.warning(f"Operation post-execution security check FAILED: Empty result")
-            return False
+            metrics['is_secure'] = False
+            metrics['reliability_score'] = 0.0
+            metrics['security_issues'].append('empty_result')
+            return metrics
 
         # 2. Check for excessive result length (potential resource exhaustion)
         if len(result) > 50000:  # Reasonable limit
             logger.warning(f"Operation post-execution security check FAILED: Result too long ({len(result)} chars)")
-            return False
+            metrics['is_secure'] = False
+            metrics['security_issues'].append('excessive_length')
+            return metrics
 
-        # 3. Check for hallucination indicators
+        # 3. Enhanced check for hallucination indicators
         hallucination_patterns = [
-            r"I don't actually (have|know|possess)",
-            r"I'm making this up",
-            r"I'm not sure (about|if) this is (correct|accurate|right)",
-            r"I (can't|cannot) (access|retrieve|find|obtain)",
-            r"I don't have (access to|information about)",
-            r"(fictional|imaginary|made up) (information|data|details)",
-            r"I'm (hallucinating|inventing|creating) this",
+            r"I don't actually (?:know|have|possess)",
+            r"I'm (?:making|just making) this up",
+            r"I'm not (?:sure|certain) (?:about|of) this",
+            r"This (?:might|may) not be (?:accurate|correct|right)",
+            r"I (?:might be|may be|could be) (?:wrong|mistaken|incorrect)",
+            r"I'm (?:guessing|speculating|hypothesizing)",
+            r"I (?:can't|cannot) (?:verify|confirm) this",
+            r"This is (?:fictional|made up|not real)",
+            r"I don't have (?:access to|information about)",
+            r"(?:fictional|imaginary|made up) (?:information|data|details)",
+            r"I'm (?:hallucinating|inventing|creating) this",
+            r"I (?:can't|cannot) (?:access|retrieve|find|obtain)",
         ]
 
+        hallucination_count = 0
         for pattern in hallucination_patterns:
             if re.search(pattern, result, re.IGNORECASE):
-                logger.warning(f"Operation post-execution security check FAILED: Potential hallucination detected")
-                return False
+                hallucination_count += 1
+                logger.warning(f"Hallucination indicator detected: '{pattern}'")
+                metrics['security_issues'].append('hallucination')
 
-        # 4. Check for refusal or inability to complete the operation
+        # Calculate hallucination penalty
+        if hallucination_count > 0:
+            hallucination_penalty = min(0.8, hallucination_count * 0.2)  # Cap at 0.8
+            metrics['reliability_score'] -= hallucination_penalty
+
+            if hallucination_count >= 3:  # Multiple strong indicators
+                logger.warning(f"Operation post-execution security check FAILED: Multiple hallucination indicators detected")
+                metrics['is_secure'] = False
+
+        # 4. Enhanced check for refusal or inability to complete the operation
         refusal_patterns = [
-            r"I (can't|cannot|am unable to) (assist|help|provide|complete|do) (that|this)",
-            r"I'm (sorry|afraid) (but|that) I (can't|cannot|am unable to)",
-            r"I'm not (able|allowed|permitted) to",
-            r"(against|violates) (my|ethical) (guidelines|programming|protocols)",
-            r"I (don't|do not) have the (capability|ability|authorization)",
+            r"I (?:can't|cannot|am unable to) (?:assist|help|provide|complete|do) (?:that|this)",
+            r"I'm (?:sorry|afraid) (?:but|that) I (?:can't|cannot|am unable to)",
+            r"I'm not (?:able|allowed|permitted) to",
+            r"(?:This|That) (?:goes|is) (?:against|beyond) my (?:capabilities|programming|abilities)",
+            r"I (?:don't|do not) have (?:access|permission|authorization) to",
+            r"(?:against|violates) (?:my|ethical) (?:guidelines|programming|protocols)",
+            r"I (?:don't|do not) have the (?:capability|ability|authorization)",
         ]
 
+        refusal_count = 0
         for pattern in refusal_patterns:
             if re.search(pattern, result, re.IGNORECASE):
+                refusal_count += 1
+                logger.warning(f"Refusal indicator detected: '{pattern}'")
+                metrics['security_issues'].append('refusal')
+
+        # Calculate refusal penalty
+        if refusal_count > 0:
+            refusal_penalty = min(0.8, refusal_count * 0.2)  # Cap at 0.8
+            metrics['reliability_score'] -= refusal_penalty
+
+            if refusal_count >= 2:  # Multiple refusal indicators
                 logger.warning(f"Operation post-execution security check FAILED: Expert refused or was unable to complete operation")
-                return False
+                metrics['is_secure'] = False
 
-        # 5. Check for format compliance if output_format is specified
+        # 5. Enhanced check for format compliance if output_format is specified
         if self.output_format:
+            format_compliance = True
+
             # Basic format compliance checks based on output_format specification
-            if "json" in self.output_format.lower() and not (result.strip().startswith('{') and result.strip().endswith('}')):
-                logger.warning(f"Operation post-execution security check FAILED: Result not in expected JSON format")
-                return False
+            if "json" in self.output_format.lower():
+                try:
+                    # Try to parse as JSON
+                    json.loads(result.strip())
+                except:
+                    format_compliance = False
+                    logger.warning(f"Format compliance check: Result not in valid JSON format")
+                    metrics['security_issues'].append('format_noncompliance')
 
-            if "list" in self.output_format.lower() and not any(line.strip().startswith(('-', '*', '1.', '2.')) for line in result.split('\n')):
-                logger.warning(f"Operation post-execution security check FAILED: Result not in expected list format")
-                return False
+            elif "list" in self.output_format.lower() and not any(line.strip().startswith(('-', '*', '1.', '2.')) for line in result.split('\n')):
+                format_compliance = False
+                logger.warning(f"Format compliance check: Result not in expected list format")
+                metrics['security_issues'].append('format_noncompliance')
 
-            if "table" in self.output_format.lower() and not ('|' in result or '\t' in result):
-                logger.warning(f"Operation post-execution security check FAILED: Result not in expected table format")
-                return False
+            elif "table" in self.output_format.lower() and not ('|' in result or '\t' in result):
+                format_compliance = False
+                logger.warning(f"Format compliance check: Result not in expected table format")
+                metrics['security_issues'].append('format_noncompliance')
 
-        # 6. Check for consistency with the operation instructions
-        # This is a basic implementation - in a real system, you would have more sophisticated
-        # semantic analysis to ensure the result is relevant to the instructions
+            # Apply format compliance penalty
+            if not format_compliance:
+                metrics['reliability_score'] -= 0.3
+                metrics['consistency_score'] -= 0.3
+
+                # Only fail the check for severe format issues
+                if "json" in self.output_format.lower() and not format_compliance:
+                    logger.warning(f"Operation post-execution security check FAILED: Result not in required JSON format")
+                    metrics['is_secure'] = False
+
+        # 6. Enhanced check for relevance to the operation instructions
         key_terms = self._extract_key_terms(self.instructions)
-        if key_terms and not any(term.lower() in result.lower() for term in key_terms if len(term) > 4):
-            logger.warning(f"Operation post-execution security check FAILED: Result may not be relevant to instructions")
-            return False
+        if key_terms:
+            # Calculate relevance score based on key term coverage
+            result_lower = result.lower()
+            matched_terms = [term for term in key_terms if term.lower() in result_lower and len(term) > 4]
 
-        # 7. Check for potentially harmful or inappropriate content
+            if len(key_terms) > 0:
+                relevance_score = len(matched_terms) / len(key_terms)
+                metrics['relevance_score'] = relevance_score
+
+                # Check if the instructions contain template variables
+                has_template_vars = '{' in self.instructions and '}' in self.instructions
+
+                # Apply relevance penalty - be extremely lenient with template variables
+                if has_template_vars:
+                    # For instructions with template variables, only log warnings but don't fail
+                    if relevance_score < 0.1:  # Less than 10% of key terms found
+                        logger.warning(f"Relevance check: Result may have low relevance to template instructions (score: {relevance_score:.2f})")
+                        # Apply a very small penalty
+                        metrics['reliability_score'] -= 0.05
+                        metrics['security_issues'].append('low_relevance_template')
+
+                        # Only add a warning to the log, but don't fail the check
+                        if relevance_score == 0:
+                            logger.warning(f"Relevance check: No key terms matched in template-based instructions")
+                            # Still don't fail the check for template variables
+                else:
+                    # For regular instructions, use the original thresholds
+                    if relevance_score < 0.3:  # Less than 30% of key terms found
+                        logger.warning(f"Relevance check: Result may not be relevant to instructions (score: {relevance_score:.2f})")
+                        metrics['reliability_score'] -= (0.3 - relevance_score)
+                        metrics['security_issues'].append('low_relevance')
+
+                        if relevance_score < 0.1:  # Very low relevance
+                            logger.warning(f"Operation post-execution security check FAILED: Result not relevant to instructions")
+                            metrics['is_secure'] = False
+
+        # 7. Enhanced check for potentially harmful or inappropriate content
         harmful_content_patterns = [
-            r'\b(?:bomb|explosive|terrorist|terrorism|attack plan)\b',
-            r'\b(?:hack|exploit|vulnerability|attack vector|zero-day)\b',
-            r'\b(?:child abuse|child exploitation)\b',
-            r'\b(?:genocide|mass shooting|school shooting)\b',
-            r'\b(?:suicide|self-harm)\b',
+            # Violence
+            r'\b(?:bomb|explosive|terrorist|terrorism|attack plan|mass casualty|assassination)\b',
+            r'\b(?:school shooting|mass shooting|genocide|ethnic cleansing|violent extremism)\b',
+
+            # Cybersecurity exploits
+            r'\b(?:hack|exploit|vulnerability|attack vector|zero-day|security hole|backdoor)\b',
+            r'\b(?:malware|ransomware|spyware|rootkit|keylogger|botnet|trojan|worm)\b',
+
+            # Illegal activities
+            r'\b(?:child abuse|child exploitation|human trafficking|sex trafficking|slavery)\b',
+            r'\b(?:drug trafficking|illegal weapons|money laundering|fraud scheme)\b',
+
+            # Self-harm
+            r'\b(?:suicide method|how to kill|self-harm technique|suicide instruction)\b',
+
+            # Hate speech indicators
+            r'\b(?:racial slur|ethnic slur|hate group|white supremacy|nazi|extremist group)\b',
         ]
 
         for pattern in harmful_content_patterns:
             if re.search(pattern, result, re.IGNORECASE):
-                logger.warning(f"Operation post-execution security check FAILED: Potentially harmful content detected")
-                return False
+                logger.warning(f"Content safety check: Potentially harmful content detected matching pattern: '{pattern}'")
+                metrics['is_secure'] = False
+                metrics['security_issues'].append('harmful_content')
+                return metrics
 
-        # All checks passed
-        logger.debug(f"Operation post-execution security check PASSED for '{self.instructions[:50]}...'")
-        return True
+        # 8. NEW: Check for output consistency and coherence
+        # This is a simple implementation - a more robust one would use NLP techniques
+        words = re.findall(r'\b\w+\b', result.lower())
+        if len(words) > 20:  # Only check substantial outputs
+            # Check for repetitive content which might indicate a stuck loop
+            word_counts = Counter(words)
+            most_common_words = word_counts.most_common(5)
+
+            # If the most common word appears too frequently, it might indicate repetition
+            if most_common_words[0][1] > len(words) * 0.2:  # More than 20% of all words
+                logger.warning(f"Consistency check: Detected potentially repetitive content")
+                metrics['consistency_score'] -= 0.3
+                metrics['security_issues'].append('repetitive_content')
+
+            # Check for sentence repetition
+            sentences = re.split(r'[.!?]\s+', result)
+            if len(sentences) > 5:  # Only check outputs with multiple sentences
+                sentence_counts = Counter(sentences)
+                most_common_sentence = sentence_counts.most_common(1)[0]
+
+                # If the same sentence appears multiple times, it might indicate a loop
+                if most_common_sentence[1] > 2 and len(most_common_sentence[0].split()) > 5:
+                    logger.warning(f"Consistency check: Detected repeated sentences")
+                    metrics['consistency_score'] -= 0.4
+                    metrics['security_issues'].append('repeated_sentences')
+
+                    if most_common_sentence[1] > 3:  # Severe repetition
+                        logger.warning(f"Operation post-execution security check FAILED: Severe sentence repetition detected")
+                        metrics['is_secure'] = False
+
+        # Calculate final reliability score based on all factors
+        metrics['reliability_score'] = max(0.0, min(1.0, metrics['reliability_score']))
+
+        # Check if reliability score is below threshold
+        if metrics['reliability_score'] < self.reliability_threshold:
+            logger.warning(f"Operation post-execution security check FAILED: Reliability score ({metrics['reliability_score']:.2f}) below threshold ({self.reliability_threshold:.2f})")
+            metrics['is_secure'] = False
+            metrics['security_issues'].append('low_reliability')
+
+        # All checks passed or failed
+        if metrics['is_secure']:
+            logger.debug(f"Operation post-execution security check PASSED for '{self.instructions[:50]}...' with reliability score {metrics['reliability_score']:.2f}")
+        else:
+            logger.warning(f"Operation post-execution security check FAILED for '{self.instructions[:50]}...' with reliability score {metrics['reliability_score']:.2f}")
+
+        return metrics
 
     def _extract_key_terms(self, text: str) -> list:
         """
         Extract key terms from text to check for relevance.
         This is a simple implementation that could be enhanced with NLP techniques.
+        Handles template variables in the format {variable_name}.
 
         Args:
             text (str): The text to extract key terms from
@@ -296,13 +566,79 @@ class Operation:
                      'mustn\'t', 'let\'s', 'that\'s', 'who\'s', 'what\'s', 'here\'s', 'there\'s', 'when\'s',
                      'where\'s', 'why\'s', 'how\'s'}
 
+        # Handle template variables - replace them with placeholder text
+        # This ensures that instructions with template variables still have meaningful key terms
+        processed_text = text
+        template_vars = re.findall(r'\{([^{}]+)\}', text)
+
+        # Add template variable names as key terms
+        additional_terms = []
+        for var in template_vars:
+            # Remove any formatting instructions (e.g., "select, true:...")
+            clean_var = var.split(',')[0].strip() if ',' in var else var.strip()
+            if clean_var and len(clean_var) > 3 and clean_var.lower() not in stop_words:
+                additional_terms.append(clean_var)
+
+            # Replace the template variable with a generic term for text processing
+            processed_text = processed_text.replace(f"{{{var}}}", f"variable_{clean_var}")
+
         # Split text into words, convert to lowercase, and filter out stop words and short words
-        words = text.lower().split()
+        words = processed_text.lower().split()
         key_terms = [word.strip('.,;:!?()[]{}"\'-') for word in words
                     if word.strip('.,;:!?()[]{}"\'-').lower() not in stop_words
                     and len(word.strip('.,;:!?()[]{}"\'-')) > 3]
 
+        # Add the template variable names to the key terms
+        key_terms.extend(additional_terms)
+
         return key_terms
+
+    def _prepare_context_with_guardrails(self, original_context: Optional[str], guardrails: Dict[str, Any]) -> str:
+        """
+        Prepares the context by incorporating guardrail inputs.
+
+        Args:
+            original_context (Optional[str]): The original context for the operation
+            guardrails (Dict[str, Any]): The guardrail inputs to incorporate
+
+        Returns:
+            str: Enhanced context with guardrail inputs
+        """
+        if not guardrails:
+            return original_context or ""
+
+        # Start with the original context
+        enhanced_context = original_context or ""
+
+        # Add guardrails section if we have guardrails
+        if guardrails:
+            # Add a separator if we already have context
+            if enhanced_context:
+                enhanced_context += "\n\n"
+
+            # Add guardrails section header
+            enhanced_context += "GUARDRAILS AND DYNAMIC INPUTS:\n"
+
+            # Add each guardrail as a key-value pair
+            for key, value in guardrails.items():
+                # Format the value based on its type
+                if isinstance(value, (dict, list)):
+                    # For complex types, format as JSON
+                    try:
+                        formatted_value = json.dumps(value, indent=2)
+                        enhanced_context += f"{key}: {formatted_value}\n"
+                    except:
+                        # Fallback for non-serializable objects
+                        enhanced_context += f"{key}: {str(value)}\n"
+                else:
+                    # For simple types, just convert to string
+                    enhanced_context += f"{key}: {str(value)}\n"
+
+            # Add a note about how to use the guardrails
+            enhanced_context += "\nPlease incorporate these guardrails and inputs into your response as appropriate."
+
+        logger.debug(f"Enhanced context with {len(guardrails)} guardrail inputs")
+        return enhanced_context
 
     def __str__(self):
         return f"Operation(instructions='{self.instructions}', expert='{self.expert.specialty if self.expert else 'Unassigned'}')"

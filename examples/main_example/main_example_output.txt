@@ -1,0 +1,60 @@
+================================================================================
+                        TBH SECURE AGENTS - MAIN EXAMPLE                        
+================================================================================
+
+Creating secure experts with specialized security profiles...
+
+2025-04-27 20:04:42,880 - tbh_secure_agents.agent - INFO - Gemini API configured.
+2025-04-27 20:04:42,880 - tbh_secure_agents.agent - INFO - Expert 'Security Researcher' initialized with Gemini model 'gemini-2.0-flash-lite' and security profile 'high_security'.
+2025-04-27 20:04:42,880 - tbh_secure_agents.agent - INFO - Gemini API configured.
+2025-04-27 20:04:42,880 - tbh_secure_agents.agent - INFO - Expert 'Vulnerability Analyst' initialized with Gemini model 'gemini-2.0-flash-lite' and security profile 'medium_security'.
+2025-04-27 20:04:42,880 - tbh_secure_agents.agent - INFO - Gemini API configured.
+2025-04-27 20:04:42,880 - tbh_secure_agents.agent - INFO - Expert 'Technical Documentation Specialist' initialized with Gemini model 'gemini-2.0-flash-lite' and security profile 'high_security'.
+Defining secure operations with clear instructions and output formats...
+
+Assembling secure squad with multiple experts and sequential operations...
+
+2025-04-27 20:04:42,880 - tbh_secure_agents.crew - INFO - Squad initialized with 3 experts and 3 operations. Process: sequential
+Deploying squad with security controls and monitoring...
+
+2025-04-27 20:04:42,880 - tbh_secure_agents.crew - INFO - Squad deployment initiated...
+2025-04-27 20:04:42,881 - tbh_secure_agents.crew - INFO - Operation '
+        Research the latest t...' already assigned to Expert 'Security Researcher'
+2025-04-27 20:04:42,881 - tbh_secure_agents.crew - INFO - Executing operation 1/3: '
+        Research the latest t...'
+2025-04-27 20:04:42,881 - tbh_secure_agents.task - INFO - Operation '
+        Research the latest trends in ransomware ...' starting execution by expert 'Security Researcher'.
+2025-04-27 20:04:42,881 - tbh_secure_agents.agent - INFO - Expert 'Security Researcher' starting operation execution: 
+        Research the latest trends in ransomware attacks targeting healthcare organizations.
+      ...
+2025-04-27 20:04:53,087 - tbh_secure_agents.agent - WARNING - Output security check FAILED: Detected potentially harmful content
+2025-04-27 20:04:53,088 - tbh_secure_agents.agent - WARNING - LLM output for expert 'Security Researcher' failed post-execution security check. Output rejected.
+2025-04-27 20:04:53,090 - tbh_secure_agents.task - INFO - Operation '
+        Research the latest trends in ransomware ...' finished execution successfully.
+2025-04-27 20:04:53,090 - tbh_secure_agents.crew - INFO - Operation 1 completed successfully in 10.21s
+2025-04-27 20:04:53,090 - tbh_secure_agents.crew - INFO - Operation '
+        Based on the research...' already assigned to Expert 'Vulnerability Analyst'
+2025-04-27 20:04:53,090 - tbh_secure_agents.crew - INFO - Executing operation 2/3: '
+        Based on the research...'
+2025-04-27 20:04:53,091 - tbh_secure_agents.task - INFO - Operation '
+        Based on the research findings, analyze p...' starting execution by expert 'Vulnerability Analyst'.
+2025-04-27 20:04:53,091 - tbh_secure_agents.agent - INFO - Expert 'Vulnerability Analyst' starting operation execution: 
+        Based on the research findings, analyze potential vulnerabilities in a typical 
+        hea...
+2025-04-27 20:05:10,495 - tbh_secure_agents.agent - WARNING - Output security check FAILED: Detected potentially harmful content
+2025-04-27 20:05:10,497 - tbh_secure_agents.agent - WARNING - LLM output for expert 'Vulnerability Analyst' failed post-execution security check. Output rejected.
+2025-04-27 20:05:10,498 - tbh_secure_agents.task - WARNING - Operation post-execution security check FAILED: Potentially harmful content detected
+2025-04-27 20:05:10,498 - tbh_secure_agents.task - WARNING - Operation post-execution security check failed for '
+        Based on the research findings, analyze p...'. Result may be compromised.
+2025-04-27 20:05:10,498 - tbh_secure_agents.task - INFO - Operation '
+        Based on the research findings, analyze p...' finished execution successfully.
+2025-04-27 20:05:10,498 - tbh_secure_agents.crew - WARNING - Output safety check: Potentially harmful content detected
+2025-04-27 20:05:10,499 - tbh_secure_agents.crew - ERROR - Operation 2 produced unsafe output
+
+================================================================================
+                             FINAL SECURITY REPORT                              
+================================================================================
+
+Squad execution failed: Operation 2 produced unsafe output
+
+================================================================================

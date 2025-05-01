@@ -1,0 +1,39 @@
+TBH SECURE AGENTS - EASY GUARDRAILS EXAMPLE
+
+Guardrail inputs:
+  - location: Seattle, Washington
+  - time_period: the next 3 days
+  - include_activities: True
+
+Result:
+
+Alright Seattle, here's your weather forecast for the next three days, keeping it clear and concise!
+
+**Today (Day 1):**
+
+*   **Temperature:** High near 68°F, low around 52°F.
+*   **Precipitation:** Chance of rain is 20%.
+*   **Wind:** Light and variable winds.
+*   **General Outlook:** Mostly cloudy, with a slight chance of showers.
+
+    *   **Activities:** With a small chance of rain and mild temperatures, consider a walk along the waterfront or exploring a local park.
+
+**Tomorrow (Day 2):**
+
+*   **Temperature:** High near 70°F, low around 54°F.
+*   **Precipitation:** 10% chance of rain.
+*   **Wind:** Light and variable.
+*   **General Outlook:** Partly sunny.
+
+    *   **Activities:** Perfect weather for a bike ride, a visit to the Pike Place Market, or enjoying an outdoor café.
+
+**Day 3:**
+
+*   **Temperature:** High near 72°F, low around 56°F.
+*   **Precipitation:** Chance of rain is 15%.
+*   **Wind:** Light and variable.
+*   **General Outlook:** Mostly sunny.
+
+    *   **Activities:** Ideal conditions for a hike in the nearby mountains, a ferry ride to one of the islands, or simply relaxing in a park.
+
+Enjoy your weather, Seattle! I will update this forecast if there are any significant changes.
